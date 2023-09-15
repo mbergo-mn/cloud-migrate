@@ -5,17 +5,24 @@ import os
 import sys
 import json
 
-def azure_create_snapshot(vm_id):
-    snapshot_name = "mysnapshot"  # Modify as needed
-    cmd = f"az vm snapshot create --resource-group MyResourceGroup --vm-name {vm_id} --name {snapshot_name}"
+snapshot_name = "jumpbox"  # Modify as needed
+vhd_name = f"{snapshot_name}.vhd"
+qcow2_name = f"{snapshot_name}.qcow2"
+vm_config = get_vm_config("jumpbox")
+storage_account = "cbdjumpboxrgdiag"
+resource_group = "CBD-JUMPBOX-RG"
+
+def azure_create_snapshot(vm_name):
+    snapshot_name = "jumpbox"  # Modify as needed
+    cmd = f"az snapshot create --name {vm_name}-snapshot --resource-group {resource_group } --source {disk_name}"
     subprocess.run(cmd, shell=True, check=True)
 
 def azure_export_vhd(snapshot_name):
     # Modify the storage account and container as needed
-    storage_account = "mystorageaccount"
-    container_name = "mycontainer"
+    storage_account = storage_account
+    container_name = "ocimigration"
     vhd_name = f"{snapshot_name}.vhd"
-    cmd = f"az snapshot export --name {snapshot_name} --resource-group MyResourceGroup --destination https://account.blob.core.windows.net/container/{vhd_name}"
+    cmd = f"az snapshot export --name {snapshot_name} --resource-group {resource_group} --destination https://cbdjumpboxrgdiag.blob.core.windows.net/{vm_name}
     subprocess.run(cmd, shell=True, check=True)
     return vhd_name
 
@@ -26,7 +33,7 @@ def convert_vhd_to_qcow2(vhd_path):
     return qcow2_path
 
 def oci_upload_image(qcow2_path):
-    bucket_name = "mybucket"  # Modify as needed
+    bucket_name = "oci-migration"  # Modify as needed
     cmd = f"oci os object put --bucket-name {bucket_name} --file {qcow2_path} --name {os.path.basename(qcow2_path)}"
     subprocess.run(cmd, shell=True, check=True)
 
@@ -35,8 +42,8 @@ def oci_import_image(qcow2_name):
     cmd = f"oci compute image import from-object --namespace mynamespace --bucket-name mybucket --name {qcow2_name} --source-image-type qcow2"
     subprocess.run(cmd, shell=True, check=True)
 
-def get_vm_config(vm_id):
-    cmd = f"az vm show --resource-group MyResourceGroup --name {vm_id} --query '[hardwareProfile.vmSize, storageProfile.osDisk.diskSizeGb]'"
+def get_vm_config(vm_name):
+    cmd = f"az vm show --resource-group {resource_group} --name {vm_name} --query '[hardwareProfile.vmSize, storageProfile.osDisk.diskSizeGb]'"
     result = subprocess.check_output(cmd, shell=True)
     vm_config = json.loads(result)
     return {
@@ -102,13 +109,13 @@ if __name__ == "__main__":
         print("Usage: script_name.py <vm-id>")
         sys.exit(1)
 
-    vm_id = sys.argv[1]
-    azure_create_snapshot(vm_id)
-    vhd_name = azure_export_vhd(vm_id)
+    vm_name = sys.argv[1]
+    azure_create_snapshot(vm_name)
+    vhd_name = azure_export_vhd(vm_name)
     qcow2_path = convert_vhd_to_qcow2(vhd_name)
     oci_upload_image(qcow2_path)
     oci_import_image(os.path.basename(qcow2_path))
 
-    vm_config = get_vm_config(vm_id)
+    vm_config = get_vm_config(vm_name)
     oci_shape = map_azure_vm_to_oci_shape(vm_config["size"])
     oci_create_vm_from_image(os.path.basename(qcow2_path), oci_shape)
