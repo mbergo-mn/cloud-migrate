@@ -11,6 +11,7 @@ qcow2_name = f"{snapshot_name}.qcow2"
 vm_config = get_vm_config("jumpbox")
 storage_account = "cbdjumpboxrgdiag"
 resource_group = "CBD-JUMPBOX-RG"
+"
 
 def azure_create_snapshot(vm_name):
     snapshot_name = "jumpbox"  # Modify as needed
@@ -34,7 +35,7 @@ def convert_vhd_to_qcow2(vhd_path):
 
 def oci_upload_image(qcow2_path):
     bucket_name = "oci-migration"  # Modify as needed
-    cmd = f"oci os object put --bucket-name {bucket_name} --file {qcow2_path} --name {os.path.basename(qcow2_path)}"
+    cmd = f" os object put --name {qcow2_name} -bn {bucket_name} --file {qcow2_name} -ns {namespace}"
     subprocess.run(cmd, shell=True, check=True)
 
 def oci_import_image(qcow2_name):
