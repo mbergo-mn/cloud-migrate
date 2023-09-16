@@ -5,42 +5,45 @@ import os
 import sys
 import json
 
-snapshot_name = "jumpbox"  # Modify as needed
-vhd_name = f"{snapshot_name}.vhd"
-qcow2_name = f"{snapshot_name}.qcow2"
-vm_config = get_vm_config("jumpbox")
-storage_account = "cbdjumpboxrgdiag"
-resource_group = "CBD-JUMPBOX-RG"
-"
+
+
+def get_vm_config(vm_name):
+    cmd = f"az vm show --resource-group {resource_group} --name {vm_name} --query '[hardwareProfile.vmSize, storageProfile.osDisk.diskSizeGb]'"
+    result = subprocess.check_output(cmd, shell=True)
+    vm_config = json.loads(result)
+    return {
+        "size": vm_config[0],
+        "disk_size": vm_config[1]
+    }
 
 def azure_create_snapshot(vm_name):
-    snapshot_name = "jumpbox"  # Modify as needed
+    snapshot_name = snapshot_name  # Modify as needed
     cmd = f"az snapshot create --name {vm_name}-snapshot --resource-group {resource_group } --source {disk_name}"
     subprocess.run(cmd, shell=True, check=True)
 
-def azure_export_vhd(snapshot_name):
+def azure_export_vhd(vm_name    ):
     # Modify the storage account and container as needed
     storage_account = storage_account
     container_name = "ocimigration"
-    vhd_name = f"{snapshot_name}.vhd"
-    cmd = f"az snapshot export --name {snapshot_name} --resource-group {resource_group} --destination https://cbdjumpboxrgdiag.blob.core.windows.net/{vm_name}
+    vhd_name = f"{vm_name}.vhd"
+    cmd = f"az snapshot export --name {vm_name} --resource-group {resource_group} --destination https://cbdjumpboxrgdiag.blob.core.windows.net/{vm_name}
     subprocess.run(cmd, shell=True, check=True)
     return vhd_name
 
-def convert_vhd_to_qcow2(vhd_path):
-    qcow2_path = vhd_path.replace(".vhd", ".qcow2")
-    cmd = f"qemu-img convert -f vpc -O qcow2 {vhd_path} {qcow2_path}"
+def convert_vhd_to_qcow2(vhd_name):
+    qcow2_name = vhd_name.replace(".vhd", ".qcow2")
+    cmd = f"qemu-img convert -f vpc -O qcow2 {vhd_name} {qcow2_name}"
     subprocess.run(cmd, shell=True, check=True)
-    return qcow2_path
+    return qcow2_name
 
-def oci_upload_image(qcow2_path):
+def oci_upload_image(qcow2_name):
     bucket_name = "oci-migration"  # Modify as needed
-    cmd = f" os object put --name {qcow2_name} -bn {bucket_name} --file {qcow2_name} -ns {namespace}"
+    cmd = f"os object put --name {qcow2_name} -ns {oci_namespace} --bucket-name {bucket_name} --file {qcow2_name}" -bn {bucket_name} --file {qcow2_name}
     subprocess.run(cmd, shell=True, check=True)
 
 def oci_import_image(qcow2_name):
     # Modify the required parameters as needed
-    cmd = f"oci compute image import from-object --namespace mynamespace --bucket-name mybucket --name {qcow2_name} --source-image-type qcow2"
+    cmd = f"oci compute image import from-object --namespace mynamespace --bucket-name mybucket --name {qcow2_name} --source-image-type qcow2 --wait-for-state AVAILABLE"
     subprocess.run(cmd, shell=True, check=True)
 
 def get_vm_config(vm_name):
@@ -97,13 +100,27 @@ def map_azure_vm_to_oci_shape(azure_size):
     }
     return mapping.get(azure_size, "VM.Standard2.1")  # default to VM.Standard2.1 if not found
 
-
 def oci_create_vm_from_image(qcow2_name, oci_shape):
     # Modify parameters as needed
-    compartment_id = "YOUR_OCI_COMPARTMENT_ID"
+    compartment_id = compartment_id
     subnet_id = "YOUR_SUBNET_ID"
-    cmd = f"oci compute instance launch --availability-domain XYZ:PHX-AD-1 --compartment-id {compartment_id} --shape {oci_shape} --image-id {qcow2_name} --subnet-id {subnet_id} --assign-public-ip true --wait-for-state RUNNING"
-    subprocess.run(cmd, shell=True, check=True)
+    cmd = f"oci compute instance launch --availability-domain XYZ:PHX-AD-1 --compartment-id {compartment_id} --shape {oci_shape} --image-id {qcow2_name} --subnet-id {subnet_id} --assign-public-ip true --boot-volume-size-in-gbs {oci_disk_size} --wait-for-state RUNNING"
+    subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
+
+def get_az_resource_group(vm_name):
+    cmd = f"az vm list"
+    run = subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
+    vms = list(run.stdout)
+    for item in vms:
+     for resource in item.get("resources", []):
+         if resource.get("name") == str(vm_name):
+             return(resource.get("resourceGroup"))
+   
+   
+    result = subprocess.check_output(cmd, shell=True)
+    return result
+       
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -113,10 +130,22 @@ if __name__ == "__main__":
     vm_name = sys.argv[1]
     azure_create_snapshot(vm_name)
     vhd_name = azure_export_vhd(vm_name)
-    qcow2_path = convert_vhd_to_qcow2(vhd_name)
-    oci_upload_image(qcow2_path)
-    oci_import_image(os.path.basename(qcow2_path))
+    qcow2_name = convert_vhd_to_qcow2(vhd_name)
+    oci_upload_image(qcow2_name)
+    oci_import_image(qcow2_name)
 
     vm_config = get_vm_config(vm_name)
     oci_shape = map_azure_vm_to_oci_shape(vm_config["size"])
-    oci_create_vm_from_image(os.path.basename(qcow2_path), oci_shape)
+    oci_create_vm_from_image(os.path.basename(qcow2_name), oci_shape)
+    oci_disk_size = vm_config["disk_size"] * 1024 * 1024 * 1024
+
+    # main variables
+    snapshot_name = os.argv[1]  # Modify as needed
+    vhd_name = f"{snapshot_name}.vhd"
+    qcow2_name = f"{snapshot_name}.qcow2"
+    vm_config = get_vm_config(snapshot_name)
+    storage_account = "cbdjumpboxrgdiag"
+    resource_group = "CBD-JUMPBOX-RG"
+    compartment_id = "ocid1.tenancy.oc1..aaaaaaaamfsljhr5zu6qcp4t6i2d7mno5cgras4rajyuvjounu6fl63cagoa"
+    oci_namespace = "id8hewq9h9im"
+    bucket_name="azure-to-oci"
