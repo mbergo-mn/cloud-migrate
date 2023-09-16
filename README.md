@@ -15,6 +15,9 @@ This script facilitates the process of migrating a VM from Azure to Oracle Cloud
 
 ## Usage
 
+- Execute login on Azure
+- `az login`
+
 - Ensure the script is executable:
 `chmod +x vm_migration.py`
 
