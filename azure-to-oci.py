@@ -5,9 +5,9 @@ import os
 import sys
 import json
 
-
-
+# Function to retrieve VM configuration from Azure
 def get_vm_config(vm_name):
+    # Construct the Azure CLI command to get VM details
     cmd = f"az vm show --resource-group {resource_group} --name {vm_name} --query '[hardwareProfile.vmSize, storageProfile.osDisk.diskSizeGb, storageProfile.osDisk.managedDisk.id]'"
     result = subprocess.check_output(cmd, shell=True)
     vm_config = json.loads(result)
@@ -17,25 +17,26 @@ def get_vm_config(vm_name):
         "disk_id": vm_config[2]
     }
 
+# Function to create a snapshot of the VM disk in Azure
 def azure_create_snapshot(vm_name):
     disk_id = get_vm_config(vm_name)['disk_id']
     cmd = f"az snapshot create --name {vm_name}-snapshot --resource-group {resource_group} --source {disk_id}"
     subprocess.run(cmd, shell=True, check=True)
 
+# Function to export the VHD of the VM snapshot in Azure
 def azure_export_vhd(vm_name):
-    # Modify the storage account and container as needed
-    storage_account = storage_account
-    vhd_name = f"{vm_name}.vhd"
-    cmd = f"az snapshot grant-access --name "{vm_name}-snapshot" --resource-group "{resource_group}" --duration-in-seconds 3600 --query "accessSas""
+    cmd = f"az snapshot grant-access --name \"{vm_name}-snapshot\" --resource-group \"{resource_group}\" --duration-in-seconds 3600 --query \"accessSas\""
     url = subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
     return url
 
+# Function to download the VHD file from Azure
 def get_vhd_azure_url(vm_name):
     snapshot_url = azure_export_vhd(vm_name)
     cmd = f"wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 {snapshot_url} -O {vm_name}.vhd"
     ret = subprocess.run(cmd, shell=True, check=True)
     return ret
 
+# Function to convert VHD file to QCOW2 format
 def convert_vhd_to_qcow2(vm_name):
     vhd_name = f"{vm_name}.vhd"
     qcow2_file = f"{vm_name}.qcow2"
@@ -43,16 +44,18 @@ def convert_vhd_to_qcow2(vm_name):
     ret = subprocess.run(cmd, shell=True, check=True)
     return qcow2_file
 
+# Function to upload QCOW2 file to OCI object storage
 def oci_upload_image(qcow2_file):
     bucket_url = "oci-migration"  # Modify as needed
     cmd = f"os object put --name {qcow2_file} -ns {oci_urlspace} --bucket-url {bucket_url} --file {qcow2_file}" -bn {bucket_url} --file {qcow2_file}
     subprocess.run(cmd, shell=True, check=True)
 
+# Function to import QCOW2 file as an image in OCI compute
 def oci_import_image(qcow2_file):
-    # Modify the required parameters as needed
     cmd = f"oci compute image import from-object --namespace myurlspace --bucket-url mybucket --name {qcow2_file} --source-image-type qcow2 --wait-for-state AVAILABLE"
     subprocess.run(cmd, shell=True, check=True)
 
+# Function to map Azure VM size to OCI VM shape
 def map_azure_vm_to_oci_shape(azure_size):
     # Extended mapping based on general VM types
     mapping = {
@@ -94,17 +97,17 @@ def map_azure_vm_to_oci_shape(azure_size):
         "Standard_L32s": "VM.Standard2.48",
 
         # ... this is propably enough for our needs
-
     }
     return mapping.get(azure_size, "VM.Standard2.1")  # default to VM.Standard2.1 if not found
 
+# Function to create a VM in OCI from the imported image
 def oci_create_vm_from_image(qcow2_file, oci_shape):
-    # Modify parameters as needed
     compartment_id = compartment_id
     subnet_id = "YOUR_SUBNET_ID"
     cmd = f"oci compute instance launch --availability-domain XYZ:PHX-AD-1 --compartment-id {compartment_id} --shape {oci_shape} --image-id {qcow2_file} --subnet-id {subnet_id} --assign-public-ip true --boot-volume-size-in-gbs {oci_disk_size} --wait-for-state RUNNING"
     subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
 
+# Function to get the Azure resource group of a VM
 def get_az_resource_group(vm_name):
     cmd = f"az vm list"
     run = subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
@@ -114,7 +117,6 @@ def get_az_resource_group(vm_name):
          if resource.get("name") == str(vm_name):
              return(resource.get("resourceGroup"))
 
-       
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: script_url.py <vm-id>")
@@ -153,3 +155,4 @@ if __name__ == "__main__":
     oci_shape = map_azure_vm_to_oci_shape(vm_config(vm_name)["size"])
     oci_create_vm_from_image(qcow2_file, oci_shape)
     oci_disk_size = get_vm_config(vm_name)["disk_size"] * 1024 * 1024 * 1024
+qqq
