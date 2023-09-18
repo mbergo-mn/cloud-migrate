@@ -5,6 +5,10 @@ import os
 import sys
 import json
 
+
+# Globals
+compartment_id = "ocid1.tenancy.oc1..aaaaaaaamfsljhr5zu6qcp4t6i2d7mno5cgras4rajyuvjounu6fl63cagoa"
+
 # Function to retrieve VM configuration from Azure
 def get_vm_config(vm_name):
     # Construct the Azure CLI command to get VM details
@@ -101,7 +105,7 @@ def map_azure_vm_to_oci_shape(azure_size):
     return mapping.get(azure_size, "VM.Standard2.1")  # default to VM.Standard2.1 if not found
 
 # Function to create a VM in OCI from the imported image
-def oci_create_vm_from_image(qcow2_file, oci_shape):
+def oci_create_vm_from_image(qcow2_file, oci_shape, oci_disk_size):
     compartment_id = compartment_id
     subnet_id = "YOUR_SUBNET_ID"
     cmd = f"oci compute instance launch --availability-domain XYZ:PHX-AD-1 --compartment-id {compartment_id} --shape {oci_shape} --image-id {qcow2_file} --subnet-id {subnet_id} --assign-public-ip true --boot-volume-size-in-gbs {oci_disk_size} --wait-for-state RUNNING"
@@ -150,6 +154,8 @@ if __name__ == "__main__":
     oci_import_image(qcow2_file)
 
     # create the VM from the imported image
-    oci_shape = map_azure_vm_to_oci_shape(vm_config(vm_name)["size"])
-    oci_create_vm_from_image(qcow2_file, oci_shape)
+    oci_shape = map_azure_vm_to_oci_shape(vm_name)["size"]
     oci_disk_size = get_vm_config(vm_name)["disk_size"] * 1024 * 1024 * 1024
+    oci_disk = + oci_disk_size*50/100
+    oci_create_vm_from_image(qcow2_file, oci_shape, oci_disk)
+
