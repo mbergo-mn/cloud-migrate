@@ -116,7 +116,7 @@ def oci_create_vm_from_image(qcow2_file, oci_shape, oci_disk_size):
 
 # Function to get the Azure resource group of a VM
 def get_az_resource_group(vm_name):
-    cmd = f"az vm list --query \"[?name=='{vm_name}'].{{ResourceGroup:resourceGroup}}\" -o tsv"
+    cmd = f"az vm list --query \"[?name==\"{vm_name}\"].{{ResourceGroup:resourceGroup}}\" -o tsv"
     resource_group_name = subprocess.run(cmd, shell=True, check=False, stdout=subprocess.PIPE)
     get_resource_group = f"az group show --name {resource_group_name.stdout} --query \"id\" -o tsv"
     resource_group = subprocess.run(get_resource_group.stdout, shell=True, check=True, stdout=subprocess.PIPE)
