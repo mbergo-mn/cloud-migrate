@@ -7,13 +7,15 @@ import json
 
 
 # Globals
+oci_urlspace = "id8hewq9h9im" # Modify as needed, but this is the bucket used for the migration
+bucket_url="azure-to-oci"
 compartment_id = str(os.argv[2])
-
+subnet_id = str(os.argv[3])
 
 # Function to retrieve VM configuration from Azure
 def get_vm_config(vm_name):
     # Construct the Azure CLI command to get VM details
-    cmd = f"az vm show --resource-group {resource_group} --name {vm_name} --query '[hardwareProfile.vmSize, storageProfile.dataDisks[].diskSizeGb[], storageProfile.osDisk.name]"
+    cmd = f"az vm show --resource-group {resource_group} --name {vm_name} --query \"[hardwareProfile.vmSize, storageProfile.dataDisks[].diskSizeGb[], storageProfile.osDisk.name]\""
     result = subprocess.check_output(cmd, shell=True)
     vm_config = json.loads(result)
     return {
@@ -123,12 +125,6 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: script_url.py <vm-id> <compartment-id> <subnet-id>")
         sys.exit(1)
-
-    # OCI variables
-    oci_urlspace = "id8hewq9h9im" # Modify as needed, but this is the bucket used for the migration
-    bucket_url="azure-to-oci"
-    compartment_id = str(os.argv[2])
-    subnet_id = str(os.argv[3])
 
     # url of the VM on Azure
     vm_name = sys.argv[1]
