@@ -12,6 +12,7 @@ bucket_url="azure-to-oci"
 compartment_id = str(sys.argv[2])
 subnet_id = str(sys.argv[3])
 
+
 # Function to retrieve VM configuration from Azure
 def get_vm_config(vm_name):
     # Construct the Azure CLI command to get VM details
@@ -38,7 +39,8 @@ def azure_export_vhd(vm_name):
 
 # Function to download the VHD file from Azure
 def get_vhd_azure_url(vm_name, snapshot_url):
-    cmd = f"wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 {snapshot_url} -O {vm_name}.vhd"
+    vhd_name = f"{vm_name}.vhd"
+    cmd = f"wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 \"{snapshot_url}\" -O \"{vhd_name}\""
     ret = subprocess.run(cmd, shell=True, check=False)
     return ret
 
@@ -114,11 +116,11 @@ def oci_create_vm_from_image(qcow2_file, oci_shape, oci_disk_size):
 
 # Function to get the Azure resource group of a VM
 def get_az_resource_group(vm_name):
-    cmd = f"az vm list --query \"[?name=='{vm_name}'].{{ResourceGroup:resourceGroup}}\" -o tsv"
-    resource_group_name = subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
-    get_resource_group = f"az group show --name {resource_group_name} --query \"id\" -o tsv"
-    resource_group = subprocess.run(get_resource_group, shell=True, check=True, stdout=subprocess.PIPE)
-    return resource_group
+    cmd = f"az vm list --query \"[?name==\"{vm_name}\"].{{ResourceGroup:resourceGroup}}\" -o tsv"
+    resource_group_name = subprocess.run(cmd, shell=True, check=False, stdout=subprocess.PIPE)
+    get_resource_group = f"az group show --name {resource_group_name.stdout} --query \"id\" -o tsv"
+    resource_group = subprocess.run(get_resource_group.stdout, shell=True, check=True, stdout=subprocess.PIPE)
+    return str(resource_group.stdout)
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -127,6 +129,12 @@ if __name__ == "__main__":
 
     # url of the VM on Azure
     vm_name = sys.argv[1]
+
+    # image qcow2 file name
+    qcow2_file = f"{vm_name}.qcow2"
+
+    # image vhd file name
+    vhd_name = f"{vm_name}.vhd"
 
     # resource group of the VM
     resource_group = get_az_resource_group(vm_name)
@@ -138,7 +146,7 @@ if __name__ == "__main__":
     vhd_url = azure_export_vhd(vm_name)
 
     # download the VHD file
-    image_downloaded = get_vhd_azure_url(vn_name, vhd_url)
+    image_downloaded = get_vhd_azure_url(vm_name, vhd_url)
 
     # convert the VHD file to QCOW2
     qcow2_file = convert_vhd_to_qcow2(image_downloaded)
