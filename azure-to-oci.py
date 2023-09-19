@@ -126,8 +126,6 @@ if __name__ == "__main__":
         print("Usage: script_url.py <vm-id> <compartment-id> <subnet-id>")
         sys.exit(1)
 
-
-
     # url of the VM on Azure
     vm_name = sys.argv[1]
 
