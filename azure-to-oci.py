@@ -7,18 +7,18 @@ import json
 
 
 # Globals
-compartment_id = "ocid1.tenancy.oc1..aaaaaaaamfsljhr5zu6qcp4t6i2d7mno5cgras4rajyuvjounu6fl63cagoa"
+compartment_id = str(os.argv[2])
 
 
 # Function to retrieve VM configuration from Azure
 def get_vm_config(vm_name):
     # Construct the Azure CLI command to get VM details
-    cmd = f"az vm show --resource-group {resource_group} --name {vm_name} --query '[hardwareProfile.vmSize, storageProfile.osDisk.diskSizeGb, storageProfile.osDisk.managedDisk.id]'"
+    cmd = f"az vm show --resource-group {resource_group} --name {vm_name} --query '[hardwareProfile.vmSize, storageProfile.dataDisks[].diskSizeGb[], storageProfile.osDisk.name]"
     result = subprocess.check_output(cmd, shell=True)
     vm_config = json.loads(result)
     return {
         "size": vm_config[0],
-        "disk_size": vm_config[1],
+        "disk_size": str(vm_config[1]),
         "disk_id": vm_config[2]
     }
 
@@ -108,7 +108,6 @@ def map_azure_vm_to_oci_shape(azure_size):
 # Function to create a VM in OCI from the imported image
 def oci_create_vm_from_image(qcow2_file, oci_shape, oci_disk_size):
     compartment_id = compartment_id
-    subnet_id = "YOUR_SUBNET_ID"
     cmd = f"oci compute instance launch --availability-domain XYZ:PHX-AD-1 --compartment-id {compartment_id} --shape {oci_shape} --image-id {qcow2_file} --subnet-id {subnet_id} --assign-public-ip true --boot-volume-size-in-gbs {oci_disk_size} --wait-for-state RUNNING"
     subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
 
@@ -122,13 +121,14 @@ def get_az_resource_group(vm_name):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: script_url.py <vm-id>")
+        print("Usage: script_url.py <vm-id> <compartment-id> <subnet-id>")
         sys.exit(1)
 
     # OCI variables
-    oci_urlspace = "id8hewq9h9im"
+    oci_urlspace = "id8hewq9h9im" # Modify as needed, but this is the bucket used for the migration
     bucket_url="azure-to-oci"
-    compartment_id = "ocid1.tenancy.oc1..aaaaaaaamfsljhr5zu6qcp4t6i2d7mno5cgras4rajyuvjounu6fl63cagoa"
+    compartment_id = str(os.argv[2])
+    subnet_id = str(os.argv[3])
 
     # url of the VM on Azure
     vm_name = sys.argv[1]
@@ -156,7 +156,7 @@ if __name__ == "__main__":
 
     # create the VM from the imported image
     oci_shape = map_azure_vm_to_oci_shape(vm_name)["size"]
-    oci_disk_size = get_vm_config(vm_name)["disk_size"] * 1024 * 1024 * 1024
-    oci_disk = + oci_disk_size*50/100
+    oci_disk_size = get_vm_config(vm_name)["disk_size"]
+    oci_disk = + oci_disk_size + (oci_disk_size*50/100)
     oci_create_vm_from_image(qcow2_file, oci_shape, oci_disk)
 
