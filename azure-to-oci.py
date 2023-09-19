@@ -9,8 +9,10 @@ import json
 # Globals
 oci_urlspace = "id8hewq9h9im" # Modify as needed, but this is the bucket used for the migration
 bucket_url="azure-to-oci"
-compartment_id = str(sys.argv[2])
-subnet_id = str(sys.argv[3])
+resource_group = str(sys.argv[2])
+compartment_id = str(sys.argv[3])
+subnet_id = str(sys.argv[4])
+
 
 
 # Function to retrieve VM configuration from Azure
@@ -113,14 +115,6 @@ def oci_create_vm_from_image(qcow2_file, oci_shape, oci_disk_size):
     compartment_id = compartment_id
     cmd = f"oci compute instance launch --availability-domain XYZ:PHX-AD-1 --compartment-id {compartment_id} --shape {oci_shape} --image-id {qcow2_file} --subnet-id {subnet_id} --assign-public-ip true --boot-volume-size-in-gbs {oci_disk_size} --wait-for-state RUNNING"
     subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
-
-# Function to get the Azure resource group of a VM
-def get_az_resource_group(vm_name):
-    cmd = f"az vm list --query \"[?name==\"{vm_name}\"].{{ResourceGroup:resourceGroup}}\" -o tsv"
-    resource_group_name = subprocess.run(cmd, shell=True, check=False, stdout=subprocess.PIPE)
-    get_resource_group = f"az group show --name {resource_group_name.stdout} --query \"id\" -o tsv"
-    resource_group = subprocess.run(get_resource_group.stdout, shell=True, check=True, stdout=subprocess.PIPE)
-    return str(resource_group.stdout)
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
