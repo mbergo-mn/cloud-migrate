@@ -45,8 +45,8 @@ def get_vhd_azure_url(vm_name, snapshot_url):
     subprocess.run(cmd, shell=True, check=False)
 
 # Function to convert VHD file to QCOW2 format
-def convert_vhd_to_qcow2(vm_name):
-    cmd = f"qemu-img convert -f vhd -O qcow2 {vhd_name} {qcow2_file}"
+def convert_vhd_to_qcow2():
+    cmd = f"qemu-img convert -f vpc -O qcow2 \"{vhd_name}\" \"{qcow2_file}\""
     ret = subprocess.run(cmd, shell=True, check=False)
 
 # Function to upload QCOW2 file to OCI object storage
@@ -133,10 +133,10 @@ if __name__ == "__main__":
     vhd_url = azure_export_vhd(vm_name)
 
     # download the VHD file
-    image_downloaded = get_vhd_azure_url(vm_name, vhd_url)
+    get_vhd_azure_url(vm_name, vhd_url)
 
     # convert the VHD file to QCOW2
-    qcow2_file = convert_vhd_to_qcow2(image_downloaded)
+    convert_vhd_to_qcow2()
 
     # upload the QCOW2 file to OCI object storage
     oci_upload_image(qcow2_file)
