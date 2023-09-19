@@ -14,7 +14,6 @@ compartment_id = str(sys.argv[3])
 subnet_id = str(sys.argv[4])
 
 
-
 # Function to retrieve VM configuration from Azure
 def get_vm_config(vm_name):
     # Construct the Azure CLI command to get VM details
@@ -42,17 +41,13 @@ def azure_export_vhd(vm_name):
 # Function to download the VHD file from Azure
 def get_vhd_azure_url(vm_name, snapshot_url):
     vhd_name = f"{vm_name}.vhd"
-    cmd = f"wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 \"{snapshot_url}\" -O \"{vhd_name}\""
-    ret = subprocess.run(cmd, shell=True, check=False)
-    return ret
+    cmd = f"wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -O \"{vhd_name}\" \"{snapshot_url}\""
+    subprocess.run(cmd, shell=True, check=False)
 
 # Function to convert VHD file to QCOW2 format
 def convert_vhd_to_qcow2(vm_name):
-    vhd_name = f"{vm_name}.vhd"
-    qcow2_file = f"{vm_name}.qcow2"
     cmd = f"qemu-img convert -f vhd -O qcow2 {vhd_name} {qcow2_file}"
-    ret = subprocess.run(cmd, shell=True, check=True)
-    return qcow2_file
+    ret = subprocess.run(cmd, shell=True, check=False)
 
 # Function to upload QCOW2 file to OCI object storage
 def oci_upload_image(qcow2_file):
@@ -116,6 +111,7 @@ def oci_create_vm_from_image(qcow2_file, oci_shape, oci_disk_size):
     cmd = f"oci compute instance launch --availability-domain XYZ:PHX-AD-1 --compartment-id {compartment_id} --shape {oci_shape} --image-id {qcow2_file} --subnet-id {subnet_id} --assign-public-ip true --boot-volume-size-in-gbs {oci_disk_size} --wait-for-state RUNNING"
     subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
 
+# Main function
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: script_url.py <vm-id> <compartment-id> <subnet-id>")
@@ -129,9 +125,6 @@ if __name__ == "__main__":
 
     # image vhd file name
     vhd_name = f"{vm_name}.vhd"
-
-    # resource group of the VM
-    resource_group = get_az_resource_group(vm_name)
 
     # create the snapshot of the VM disk
     azure_create_snapshot(vm_name)
