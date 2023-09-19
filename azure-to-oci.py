@@ -108,7 +108,6 @@ def map_azure_vm_to_oci_shape(azure_size):
 # Function to create a VM in OCI from the imported image
 def oci_create_vm_from_image(qcow2_file, oci_shape, oci_disk_size):
     compartment_id = compartment_id
-    subnet_id = "YOUR_SUBNET_ID"
     cmd = f"oci compute instance launch --availability-domain XYZ:PHX-AD-1 --compartment-id {compartment_id} --shape {oci_shape} --image-id {qcow2_file} --subnet-id {subnet_id} --assign-public-ip true --boot-volume-size-in-gbs {oci_disk_size} --wait-for-state RUNNING"
     subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
 
@@ -122,13 +121,14 @@ def get_az_resource_group(vm_name):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: script_url.py <vm-id>")
+        print("Usage: script_url.py <vm-id> <compartment-id> <subnet-id>")
         sys.exit(1)
 
     # OCI variables
-    oci_urlspace = "id8hewq9h9im"
+    oci_urlspace = "id8hewq9h9im" # Modify as needed, but this is the bucket used for the migration
     bucket_url="azure-to-oci"
-    compartment_id = "ocid1.tenancy.oc1..aaaaaaaamfsljhr5zu6qcp4t6i2d7mno5cgras4rajyuvjounu6fl63cagoa"
+    compartment_id = str(os.argv[2])
+    subnet_id = str(os.argv[3])
 
     # url of the VM on Azure
     vm_name = sys.argv[1]
