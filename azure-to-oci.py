@@ -9,8 +9,8 @@ import json
 # Globals
 oci_urlspace = "id8hewq9h9im" # Modify as needed, but this is the bucket used for the migration
 bucket_url="azure-to-oci"
-compartment_id = str(os.argv[2])
-subnet_id = str(os.argv[3])
+compartment_id = str(sys.argv[2])
+subnet_id = str(sys.argv[3])
 
 # Function to retrieve VM configuration from Azure
 def get_vm_config(vm_name):
@@ -34,13 +34,12 @@ def azure_create_snapshot(vm_name):
 def azure_export_vhd(vm_name):
     cmd = f"az snapshot grant-access --name \"{vm_name}-snapshot\" --resource-group \"{resource_group}\" --duration-in-seconds 3600 --query \"accessSas\""
     url = subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
-    return url
+    return url.stdout.decode('utf-8').strip("\"")
 
 # Function to download the VHD file from Azure
-def get_vhd_azure_url(vm_name):
-    snapshot_url = azure_export_vhd(vm_name)
+def get_vhd_azure_url(vm_name, snapshot_url):
     cmd = f"wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 {snapshot_url} -O {vm_name}.vhd"
-    ret = subprocess.run(cmd, shell=True, check=True)
+    ret = subprocess.run(cmd, shell=True, check=False)
     return ret
 
 # Function to convert VHD file to QCOW2 format
@@ -54,7 +53,7 @@ def convert_vhd_to_qcow2(vm_name):
 # Function to upload QCOW2 file to OCI object storage
 def oci_upload_image(qcow2_file):
     bucket_url = "oci-migration"  # Modify as needed
-    cmd = f"os object put --name {qcow2_file} -ns {oci_urlspace} --bucket-url {bucket_url} --file {qcow2_file}" -bn {bucket_url} --file {qcow2_file}
+    cmd = f"oci os object put --name {qcow2_file} -ns {oci_urlspace} --bucket-url {bucket_url} --file {qcow2_file} -bn {bucket_url} --file {qcow2_file}"
     subprocess.run(cmd, shell=True, check=True)
 
 # Function to import QCOW2 file as an image in OCI compute
@@ -139,7 +138,7 @@ if __name__ == "__main__":
     vhd_url = azure_export_vhd(vm_name)
 
     # download the VHD file
-    image_downloaded = get_vhd_azure_url(vhd_url)
+    image_downloaded = get_vhd_azure_url(vn_name, vhd_url)
 
     # convert the VHD file to QCOW2
     qcow2_file = convert_vhd_to_qcow2(image_downloaded)
