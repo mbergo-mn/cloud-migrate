@@ -12,6 +12,7 @@ bucket_url="azure-to-oci"
 compartment_id = str(sys.argv[2])
 subnet_id = str(sys.argv[3])
 
+
 # Function to retrieve VM configuration from Azure
 def get_vm_config(vm_name):
     # Construct the Azure CLI command to get VM details
@@ -116,7 +117,7 @@ def oci_create_vm_from_image(qcow2_file, oci_shape, oci_disk_size):
 # Function to get the Azure resource group of a VM
 def get_az_resource_group(vm_name):
     cmd = f"az vm list --query \"[?name=='{vm_name}'].{{ResourceGroup:resourceGroup}}\" -o tsv"
-    resource_group_name = subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
+    resource_group_name = subprocess.run(cmd, shell=True, check=False, stdout=subprocess.PIPE)
     get_resource_group = f"az group show --name {resource_group_name.stdout} --query \"id\" -o tsv"
     resource_group = subprocess.run(get_resource_group.stdout, shell=True, check=True, stdout=subprocess.PIPE)
     return str(resource_group.stdout)
@@ -128,6 +129,12 @@ if __name__ == "__main__":
 
     # url of the VM on Azure
     vm_name = sys.argv[1]
+
+    # image qcow2 file name
+    qcow2_file = f"{vm_name}.qcow2"
+
+    # image vhd file name
+    vhd_name = f"{vm_name}.vhd"
 
     # resource group of the VM
     resource_group = get_az_resource_group(vm_name)
