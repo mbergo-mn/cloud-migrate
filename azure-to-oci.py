@@ -44,21 +44,20 @@ def azure_export_vhd(vm_name):
 # Function to download the VHD file from Azure
 def get_vhd_azure_url(vm_name, snapshot_url):
     print("Downloading VHD from Azure...")
-    vhd_name = f"{vm_name}.vhd"
-    cmd = f"wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -O {vhd_name} {snapshot_url}"
-    subprocess.run(cmd, shell=True, check=False)
+    cmd = f"wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -O {vhd_name} \"{snapshot_url}"
+    subprocess.run(cmd, shell=True, check=True)
 
 # Function to convert VHD file to QCOW2 format
 def convert_vhd_to_qcow2(vhd_name, qcow2_file):
     print("Converting VHD to QCOW2...")
-    cmd = f"qemu-img convert -f vpc -O qcow2 {vhd_name} {qcow2_file}"
-    subprocess.run(cmd, shell=True, check=False)
+    cmd = f"qemu-img convert -p -f vpc -O qcow2 {vhd_name} {qcow2_file}"
+    subprocess.run(cmd, shell=True, check=True)
 
 # Function to upload QCOW2 file to OCI object storage
 def oci_upload_image(qcow2_file):
     print("Uploading QCOW2 to OCI object storage...")
     bucket_url = "oci-migration"  # Modify as needed
-    cmd = f"oci os object put -bn {bucket_name} --file {qcow2_file} -ns id8hewq9h9im"
+    cmd = f"oci os object put -bn {bucket_name} --file {qcow2_file} -ns {oci_urlspace}"
     subprocess.run(cmd, shell=True, check=True)
 
 # Function to import QCOW2 file as an image in OCI compute
@@ -129,7 +128,7 @@ def oci_create_vm_from_image(qcow2_file, oci_shape, oci_disk_size):
 # Main function
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: script_url.py <vm-id> <compartment-id> <subnet-id>")
+        print("Usage: script_url.py <vm-id> <resource-group> <compartment-id> <subnet-id>")
         sys.exit(1)
 
     # url of the VM on Azure
