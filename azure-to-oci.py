@@ -63,7 +63,7 @@ def oci_upload_image(qcow2_file):
 # Function to import QCOW2 file as an image in OCI compute
 def oci_import_image(qcow2_file):
     print("Importing QCOW2 to OCI compute...")
-    cmd = f"oci compute image import from-object -ns \"id8hewq9h9im\" -bn {bucket_name} --name {qcow2_file} --source-image-type qcow2 --wait-for-state AVAILABLE"
+    cmd = f"oci compute image import from-object -bn azure-to-oci --compartment-id {compartment_id} --name {qcow2_file} -ns {oci_urlspace}"
     subprocess.run(cmd, shell=True, check=True)
 
 # Function to map Azure VM size to OCI VM shape
