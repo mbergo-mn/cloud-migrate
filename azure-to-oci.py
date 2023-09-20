@@ -70,8 +70,8 @@ def oci_import_image(qcow2_file):
 def oci_check_image_status(qcow2_file):
     print("Checking OCI image status...")
     cmd = f"oci compute image list --compartment-id {compartment_id} --display-name {qcow2_file} --query 'data[0].\"lifecycle-state\"'"
-    result = subprocess.check_output(cmd, shell=True)
-    return result.decode('utf-8').strip("\"")
+    result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
+    return result.stdout.decode('utf-8').strip().strip('"')
 
 # Function to map Azure VM size to OCI VM shape
 def map_azure_vm_to_oci_shape(azure_size):
