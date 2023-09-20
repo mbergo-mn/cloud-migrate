@@ -70,7 +70,7 @@ def oci_import_image(qcow2_file):
 # Function to check the if the image status is AVAILABLE
 def oci_check_image_status(qcow2_file):
     print("Checking OCI image status...")
-    cmd = f"oci compute image list --compartment-id {compartment_id} --query \"data[?contains(\"display-name\", '{qcow2_file}')].lifecycle-state\""
+    cmd = f"oci compute image list --compartment-id {compartment_id} --display-name {qcow2_file} --query 'data[0].\"lifecycle-state\"'"
     result = subprocess.check_output(cmd, shell=True)
     return result.decode('utf-8').strip("\"")
 
