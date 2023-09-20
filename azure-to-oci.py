@@ -44,7 +44,7 @@ def azure_export_vhd(vm_name):
 def get_vhd_azure_url(vm_name, snapshot_url):
     print("Downloading VHD from Azure...")
     vhd_name = f"{vm_name}.vhd"
-    cmd = f"wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -O \"{vhd_name}\" \"{snapshot_url}\""
+    cmd = f"wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -O {vhd_name} {snapshot_url}"
     subprocess.run(cmd, shell=True, check=False)
 
 # Function to convert VHD file to QCOW2 format
