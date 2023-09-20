@@ -45,14 +45,14 @@ def get_vhd_azure_url(vm_name, snapshot_url):
     subprocess.run(cmd, shell=True, check=False)
 
 # Function to convert VHD file to QCOW2 format
-def convert_vhd_to_qcow2():
+def convert_vhd_to_qcow2(vhd_name, qcow2_file):
     cmd = f"qemu-img convert -f vpc -O qcow2 \"{vhd_name}\" \"{qcow2_file}\""
     ret = subprocess.run(cmd, shell=True, check=False)
 
 # Function to upload QCOW2 file to OCI object storage
 def oci_upload_image(qcow2_file):
     bucket_url = "oci-migration"  # Modify as needed
-    cmd = f"oci os object put --name {qcow2_file} -ns {oci_urlspace} --bucket-url {bucket_url} --file {qcow2_file} -bn {bucket_url} --file {qcow2_file}"
+    cmd = f"oci os object put --name {qcow2_file} -ns {oci_urlspace} --file {qcow2_file} -bn {bucket_url} --file {qcow2_file}"
     subprocess.run(cmd, shell=True, check=True)
 
 # Function to import QCOW2 file as an image in OCI compute
@@ -107,7 +107,6 @@ def map_azure_vm_to_oci_shape(azure_size):
 
 # Function to create a VM in OCI from the imported image
 def oci_create_vm_from_image(qcow2_file, oci_shape, oci_disk_size):
-    compartment_id = compartment_id
     cmd = f"oci compute instance launch --availability-domain XYZ:PHX-AD-1 --compartment-id {compartment_id} --shape {oci_shape} --image-id {qcow2_file} --subnet-id {subnet_id} --assign-public-ip true --boot-volume-size-in-gbs {oci_disk_size} --wait-for-state RUNNING"
     subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
 
@@ -136,7 +135,7 @@ if __name__ == "__main__":
     get_vhd_azure_url(vm_name, vhd_url)
 
     # convert the VHD file to QCOW2
-    convert_vhd_to_qcow2()
+    convert_vhd_to_qcow2(vhd_name, qcow2_file)
 
     # upload the QCOW2 file to OCI object storage
     oci_upload_image(qcow2_file)
