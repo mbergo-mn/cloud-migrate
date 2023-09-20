@@ -4,6 +4,7 @@ import subprocess
 import os
 import sys
 import json
+import time
 
 
 # Globals
@@ -63,8 +64,15 @@ def oci_upload_image(qcow2_file):
 # Function to import QCOW2 file as an image in OCI compute
 def oci_import_image(qcow2_file):
     print("Importing QCOW2 to OCI compute...")
-    cmd = f"oci compute image import from-object -bn azure-to-oci --compartment-id {compartment_id} --name {qcow2_file} -ns {oci_urlspace}"
+    cmd = f"oci compute image import from-object -bn azure-to-oci --compartment-id {compartment_id} --name {qcow2_file} -ns {oci_urlspace} --display-name {qcow2_file}"
     subprocess.run(cmd, shell=True, check=True)
+
+# Function to check the if the image status is AVAILABLE
+def oci_check_image_status(qcow2_file):
+    print("Checking OCI image status...")
+    cmd = f"oci compute image list --compartment-id {compartment_id} --query \"data[?contains(\"display-name\", '{qcow2_file}')].lifecycle-state\""
+    result = subprocess.check_output(cmd, shell=True)
+    return result.decode('utf-8').strip("\"")
 
 # Function to map Azure VM size to OCI VM shape
 def map_azure_vm_to_oci_shape(azure_size):
@@ -150,6 +158,14 @@ if __name__ == "__main__":
 
     # import the QCOW2 file to OCI compute
     oci_import_image(qcow2_file)
+
+    # check if the image is available
+    while True:
+        if oci_check_image_status(qcow2_file) == "AVAILABLE":
+            break
+        else:
+            print("Waiting for image to be available...")
+            time.sleep(60)
 
     # create the VM from the imported image
     oci_shape = map_azure_vm_to_oci_shape(vm_name)["size"]
