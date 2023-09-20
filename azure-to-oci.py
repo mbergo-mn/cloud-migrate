@@ -28,40 +28,47 @@ def get_vm_config(vm_name):
 
 # Function to create a snapshot of the VM disk in Azure
 def azure_create_snapshot(vm_name):
+    print("Creating snapshot in Azure...")
     disk_id = get_vm_config(vm_name)['disk_id']
     cmd = f"az snapshot create --name {vm_name}-snapshot --resource-group {resource_group} --source {disk_id}"
     subprocess.run(cmd, shell=True, check=True)
 
 # Function to export the VHD of the VM snapshot in Azure
 def azure_export_vhd(vm_name):
+    print("Exporting VHD from Azure...")
     cmd = f"az snapshot grant-access --name \"{vm_name}-snapshot\" --resource-group \"{resource_group}\" --duration-in-seconds 3600 --query \"accessSas\""
     url = subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
     return url.stdout.decode('utf-8').strip("\"")
 
 # Function to download the VHD file from Azure
 def get_vhd_azure_url(vm_name, snapshot_url):
+    print("Downloading VHD from Azure...")
     vhd_name = f"{vm_name}.vhd"
     cmd = f"wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -O \"{vhd_name}\" \"{snapshot_url}\""
     subprocess.run(cmd, shell=True, check=False)
 
 # Function to convert VHD file to QCOW2 format
 def convert_vhd_to_qcow2(vhd_name, qcow2_file):
-    cmd = f"qemu-img convert -f vpc -O qcow2 \"{vhd_name}\" \"{qcow2_file}\""
-    ret = subprocess.run(cmd, shell=True, check=False)
+    print("Converting VHD to QCOW2...")
+    cmd = f"qemu-img convert -f vpc -O qcow2 {vhd_name} {qcow2_file}"
+    subprocess.run(cmd, shell=True, check=False)
 
 # Function to upload QCOW2 file to OCI object storage
 def oci_upload_image(qcow2_file):
+    print("Uploading QCOW2 to OCI object storage...")
     bucket_url = "oci-migration"  # Modify as needed
     cmd = f"oci os object put --name {qcow2_file} -ns {oci_urlspace} --file {qcow2_file} -bn {bucket_url} --file {qcow2_file}"
     subprocess.run(cmd, shell=True, check=True)
 
 # Function to import QCOW2 file as an image in OCI compute
 def oci_import_image(qcow2_file):
+    print("Importing QCOW2 to OCI compute...")
     cmd = f"oci compute image import from-object --namespace myurlspace --bucket-url mybucket --name {qcow2_file} --source-image-type qcow2 --wait-for-state AVAILABLE"
     subprocess.run(cmd, shell=True, check=True)
 
 # Function to map Azure VM size to OCI VM shape
 def map_azure_vm_to_oci_shape(azure_size):
+    print("Mapping Azure VM size to OCI VM shape...")
     # Extended mapping based on general VM types
     mapping = {
         # General purpose Azure VMs to OCI VM shapes
@@ -107,6 +114,7 @@ def map_azure_vm_to_oci_shape(azure_size):
 
 # Function to create a VM in OCI from the imported image
 def oci_create_vm_from_image(qcow2_file, oci_shape, oci_disk_size):
+    print("Creating VM in OCI...")
     cmd = f"oci compute instance launch --availability-domain XYZ:PHX-AD-1 --compartment-id {compartment_id} --shape {oci_shape} --image-id {qcow2_file} --subnet-id {subnet_id} --assign-public-ip true --boot-volume-size-in-gbs {oci_disk_size} --wait-for-state RUNNING"
     subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
 
