@@ -8,7 +8,7 @@ import json
 
 # Globals
 oci_urlspace = "id8hewq9h9im" # Modify as needed, but this is the bucket used for the migration
-bucket_url="azure-to-oci"
+bucket_name="azure-to-oci"
 resource_group = str(sys.argv[2])
 compartment_id = str(sys.argv[3])
 subnet_id = str(sys.argv[4])
@@ -57,13 +57,13 @@ def convert_vhd_to_qcow2(vhd_name, qcow2_file):
 def oci_upload_image(qcow2_file):
     print("Uploading QCOW2 to OCI object storage...")
     bucket_url = "oci-migration"  # Modify as needed
-    cmd = f"oci os object put --name {qcow2_file} -ns {oci_urlspace} --file {qcow2_file} -bn {bucket_url} --file {qcow2_file}"
+    cmd = f"oci os object put -bn {bucket_name} --file {qcow2_file} -ns id8hewq9h9im"
     subprocess.run(cmd, shell=True, check=True)
 
 # Function to import QCOW2 file as an image in OCI compute
 def oci_import_image(qcow2_file):
     print("Importing QCOW2 to OCI compute...")
-    cmd = f"oci compute image import from-object --namespace myurlspace --bucket-url mybucket --name {qcow2_file} --source-image-type qcow2 --wait-for-state AVAILABLE"
+    cmd = f"oci compute image import from-object -ns \"id8hewq9h9im\" -bn {bucket_name} --name {qcow2_file} --source-image-type qcow2 --wait-for-state AVAILABLE"
     subprocess.run(cmd, shell=True, check=True)
 
 # Function to map Azure VM size to OCI VM shape
