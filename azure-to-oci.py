@@ -59,7 +59,7 @@ def oci_upload_image(qcow2_file):
     print("Uploading QCOW2 to OCI object storage...")
     bucket_url = "oci-migration"  # Modify as needed
     cmd = f"oci os object put -bn {bucket_name} --file {qcow2_file} -ns {oci_urlspace}"
-    subprocess.run(cmd, shell=True, check=True)
+    subprocess.run(cmd, shell=True, check=False)
 
 # Function to import QCOW2 file as an image in OCI compute
 def oci_import_image(qcow2_file):
