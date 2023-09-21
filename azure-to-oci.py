@@ -13,8 +13,9 @@ bucket_name="azure-to-oci"
 resource_group = str(sys.argv[2])
 compartment_id = str(sys.argv[3])
 subnet_id = str(sys.argv[4])
+instance_size = str(sys.argv[5])
 
-
+import pdb;pdb.set_trace()
 # Function to retrieve VM configuration from Azure
 def get_vm_config(vm_name):
     # Construct the Azure CLI command to get VM details
@@ -73,52 +74,6 @@ def oci_check_image_status(qcow2_file):
     result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
     return result.stdout.decode('utf-8').strip().strip('"')
 
-# Function to map Azure VM size to OCI VM shape
-def map_azure_vm_to_oci_shape(azure_size):
-    print("Mapping Azure VM size to OCI VM shape...")
-    # Extended mapping based on general VM types
-    mapping = {
-        # General purpose Azure VMs to OCI VM shapes
-        "Standard_DS1_v2": "VM.Standard2.1",
-        "Standard_DS2_v2": "VM.Standard2.2",
-        "Standard_DS3_v2": "VM.Standard2.4",
-        "Standard_DS4_v2": "VM.Standard2.8",
-        "Standard_DS5_v2": "VM.Standard2.16",
-
-        # Compute optimized Azure VMs to OCI VM shapes
-        "Standard_F2s_v2": "VM.Standard.E3.Flex",
-        "Standard_F4s_v2": "VM.Standard.E3.Flex",
-        "Standard_F8s_v2": "VM.Standard.E3.Flex",
-        "Standard_F16s_v2": "VM.Standard.E3.Flex",
-
-        # Memory optimized Azure VMs to OCI VM shapes
-        "Standard_E2_v3": "VM.Standard.E3.Flex",
-        "Standard_E4_v3": "VM.Standard.E3.Flex",
-        "Standard_E8_v3": "VM.Standard.E3.Flex",
-        "Standard_E16_v3": "VM.Standard.E3.Flex",
-
-        # GPU optimized Azure VMs to OCI VM shapes
-        "Standard_NC6": "VM.GPU2.1",
-        "Standard_NC12": "VM.GPU2.2",
-        "Standard_NC24": "VM.GPU3.1",
-        "Standard_NC24r": "VM.GPU3.2",
-
-        # High performance Azure VMs to OCI VM shapes
-        "Standard_H8": "VM.Standard2.16",
-        "Standard_H16": "VM.Standard2.24",
-        "Standard_H8m": "VM.Standard2.16",
-        "Standard_H16m": "VM.Standard2.24",
-
-        # Storage optimized Azure VMs to OCI VM shapes (Note: OCI doesn't have exact matches, so mapping to general shapes)
-        "Standard_L4s": "VM.Standard2.8",
-        "Standard_L8s": "VM.Standard2.16",
-        "Standard_L16s": "VM.Standard2.24",
-        "Standard_L32s": "VM.Standard2.48",
-
-        # ... this is propably enough for our needs
-    }
-    return mapping.get(azure_size, "VM.Standard2.1")  # default to VM.Standard2.1 if not found
-
 # Function to create a VM in OCI from the imported image
 def oci_create_vm_from_image(qcow2_file, oci_shape, oci_disk_size):
     print("Creating VM in OCI...")
@@ -127,8 +82,8 @@ def oci_create_vm_from_image(qcow2_file, oci_shape, oci_disk_size):
 
 # Main function
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: script_url.py <vm-id> <resource-group> <compartment-id> <subnet-id>")
+    if len(sys.argv) < 6:
+        print("Usage: script_url.py <vm-id> <resource-group> <compartment-id> <subnet-id> <instance-size>")
         sys.exit(1)
 
     # url of the VM on Azure
@@ -167,7 +122,7 @@ if __name__ == "__main__":
             time.sleep(60)
 
     # create the VM from the imported image
-    oci_shape = map_azure_vm_to_oci_shape(vm_name)["size"]
+    oci_shape = instance_size
     oci_disk_size = get_vm_config(vm_name)["disk_size"]
     oci_disk = + oci_disk_size + (oci_disk_size*50/100)
     oci_create_vm_from_image(qcow2_file, oci_shape, oci_disk)
