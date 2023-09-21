@@ -74,10 +74,16 @@ def oci_check_image_status(qcow2_file):
     result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
     return result.stdout.decode('utf-8').strip().strip('"')
 
+# Check image id
+def oci_check_image_id(qcow2_file):
+    cmd = f"oci compute image list --compartment-id {compartment_id} --display-name {qcow2_file} --query \"data[].id\""
+    result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
+    return result.stdout.decode('utf-8').strip().strip('"')
+
 # Function to create a VM in OCI from the imported image
 def oci_create_vm_from_image(qcow2_file, oci_shape, oci_disk_size):
     print("Creating VM in OCI...")
-    cmd = f"oci compute instance launch --availability-domain XYZ:PHX-AD-1 --compartment-id {compartment_id} --shape {oci_shape} --image-id {qcow2_file} --subnet-id {subnet_id} --assign-public-ip false --boot-volume-size-in-gbs {oci_disk_size} --display-name {vm_name}"
+    cmd = f"oci compute instance launch --availability-domain XYZ:PHX-AD-1 --compartment-id {compartment_id} --shape {oci_shape} --image-id {image_id} --subnet-id {subnet_id} --assign-public-ip false --boot-volume-size-in-gbs {oci_disk_size} --display-name {vm_name}"
     subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
 
 # Main function
@@ -120,6 +126,9 @@ if __name__ == "__main__":
         else:
             print("Waiting for image to be available...")
             time.sleep(60)
+
+    # get the image id
+    image_id = oci_check_image_id(qcow2_file)
 
     # create the VM from the imported image
     oci_shape = instance_size
