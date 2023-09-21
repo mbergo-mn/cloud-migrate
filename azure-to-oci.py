@@ -125,5 +125,5 @@ if __name__ == "__main__":
     oci_shape = instance_size
     oci_disk_size = get_vm_config(vm_name)["disk_size"]
     oci_disk =  oci_disk_size + (oci_disk_size*(50/100))
-    oci_create_vm_from_image(qcow2_file, oci_shape, oci_disk)
+    oci_create_vm_from_image(qcow2_file, oci_shape, int(oci_disk))
 
