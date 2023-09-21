@@ -78,7 +78,7 @@ def oci_check_image_status(qcow2_file):
 def oci_check_image_id(qcow2_file):
     cmd = f"oci compute image list --compartment-id {compartment_id} --display-name {qcow2_file} --query \"data[0].id\""
     result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
-    return str(result.stdout)
+    return str(result.stdout.decode('utf-8').strip().strip('"'))
 
 # Function to create a VM in OCI from the imported image
 def oci_create_vm_from_image(qcow2_file, oci_shape, oci_disk_size):
