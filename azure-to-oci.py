@@ -15,7 +15,7 @@ compartment_id = str(sys.argv[3])
 subnet_id = str(sys.argv[4])
 instance_size = str(sys.argv[5])
 
-import pdb;pdb.set_trace()
+
 # Function to retrieve VM configuration from Azure
 def get_vm_config(vm_name):
     # Construct the Azure CLI command to get VM details
