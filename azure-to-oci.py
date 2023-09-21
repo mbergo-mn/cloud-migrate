@@ -24,7 +24,7 @@ def get_vm_config(vm_name):
     vm_config = json.loads(result)
     return {
         "size": vm_config[0],
-        "disk_size": int(vm_config[1]),
+        "disk_size": int(vm_config[1][0]),
         "disk_id": vm_config[2]
     }
 
