@@ -112,7 +112,8 @@ def map_azure_vm_to_oci_shape(azure_size):
     "Standard_L8s": ["8", "64.0"],
     "Standard_L16s": ["16", "128.0"],
     "Standard_L32s": ["32", "256.0"],
-}
+    "Standard_M64s": ["64", "256"],
+    }
     return list(mapping.get(azure_size, ["4", "16"]))
 
 # Function to create a VM in OCI from the imported image
