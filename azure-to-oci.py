@@ -113,7 +113,7 @@ def map_azure_vm_to_oci_shape(azure_size):
     "Standard_L16s": ["16", "128.0"],
     "Standard_L32s": ["32", "256.0"],
 }
-    return mapping.get(azure_size, ["4", "16"])
+    return list(mapping.get(azure_size, ["4", "16"]))
 
 # Function to create a VM in OCI from the imported image
 def oci_create_vm_from_image(qcow2_file, oci_shape, oci_disk_size):
