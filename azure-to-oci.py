@@ -83,51 +83,42 @@ def oci_check_image_id(qcow2_file):
 def map_azure_vm_to_oci_shape(azure_size):
     # Extended mapping based on general VM types
     mapping = {
-        # General purpose Azure VMs to OCI VM shapes
-        "Standard_DS1_v2": "VM.Standard2.1",
-        "Standard_DS2_v2": "VM.Standard2.2",
-        "Standard_DS3_v2": "VM.Standard2.4",
-        "Standard_DS4_v2": "VM.Standard2.8",
-        "Standard_DS5_v2": "VM.Standard2.16",
-
-        # Compute optimized Azure VMs to OCI VM shapes
-        "Standard_F2s_v2": "VM.Standard.E3.Flex",
-        "Standard_F4s_v2": "VM.Standard.E3.Flex",
-        "Standard_F8s_v2": "VM.Standard.E3.Flex",
-        "Standard_F16s_v2": "VM.Standard.E3.Flex",
-
-        # Memory optimized Azure VMs to OCI VM shapes
-        "Standard_E2_v3": "VM.Standard.E3.Flex",
-        "Standard_E4_v3": "VM.Standard.E3.Flex",
-        "Standard_E8_v3": "VM.Standard.E3.Flex",
-        "Standard_E16_v3": "VM.Standard.E3.Flex",
-
-        # GPU optimized Azure VMs to OCI VM shapes
-        "Standard_NC6": "VM.GPU2.1",
-        "Standard_NC12": "VM.GPU2.2",
-        "Standard_NC24": "VM.GPU3.1",
-        "Standard_NC24r": "VM.GPU3.2",
-
-        # High performance Azure VMs to OCI VM shapes
-        "Standard_H8": "VM.Standard2.16",
-        "Standard_H16": "VM.Standard2.24",
-        "Standard_H8m": "VM.Standard2.16",
-        "Standard_H16m": "VM.Standard2.24",
-
-        # Storage optimized Azure VMs to OCI VM shapes (Note: OCI doesn't have exact matches, so mapping to general shapes)
-        "Standard_L4s": "VM.Standard2.8",
-        "Standard_L8s": "VM.Standard2.16",
-        "Standard_L16s": "VM.Standard2.24",
-        "Standard_L32s": "VM.Standard2.48",
-
-        # ... this is propably enough for our needs
-    }
-    return mapping.get(azure_size, "VM.Standard2.1")
+    "Standard_D1_v2": ["1", "3.5"],
+    "Standard_D2_v2": ["2", "7"],
+    "Standard_D3_v2": ["4", "14"],
+    "Standard_D4_v2": ["8", "28"],
+    "Standard_D5_v2": ["16", "56"],
+    "Standard_DS1_v2": ["1", "3.5"],
+    "Standard_DS2_v2": ["2", "7"],
+    "Standard_DS3_v2": ["4", "14"],
+    "Standard_DS4_v2": ["8", "28"],
+    "Standard_F2s_v2": ["2", "4"],
+    "Standard_F4s_v2": ["4", "8"],
+    "Standard_F8s_v2": ["8", "16"],
+    "Standard_F16s_v2": ["16", "32"],
+    "Standard_E2_v3": ["2", "16"],
+    "Standard_E4_v3": ["4", "32"],
+    "Standard_E8_v3": ["8", "64"],
+    "Standard_E16_v3": ["16", "128"],
+    "Standard_E2s_v3": ["2", "16"],
+    "Standard_E4s_v3": ["4", "32"],
+    "Standard_E8s_v3": ["8", "64"],
+    "Standard_E16s_v3": ["16", "128"],
+    "Standard_NC6": ["6", "56"],
+    "Standard_NC12": ["12", "112"],
+    "Standard_NC24": ["24", "224"],
+    "Standard_NC24r": ["24", "224"],
+    "Standard_L4s": ["4", "32.0"],
+    "Standard_L8s": ["8", "64.0"],
+    "Standard_L16s": ["16", "128.0"],
+    "Standard_L32s": ["32", "256.0"],
+}
+    return mapping.get(azure_size, ["4", "16"])
 
 # Function to create a VM in OCI from the imported image
 def oci_create_vm_from_image(qcow2_file, oci_shape, oci_disk_size):
     print("Creating VM in OCI...")
-    cmd = f"oci compute instance launch --availability-domain UIVj:US-ASHBURN-AD-1 --compartment-id {compartment_id} --shape {oci_shape} --image-id {image_id} --subnet-id {subnet_id} --assign-public-ip false --boot-volume-size-in-gbs {oci_disk_size} --display-name {vm_name}"
+    cmd = f"oci compute instance launch --availability-domain UIVj:US-ASHBURN-AD-1 --compartment-id {compartment_id} --shape {oci_shape} --shape-config {oci_shape_config} --image-id {image_id} --subnet-id {subnet_id} --assign-public-ip false --boot-volume-size-in-gbs {oci_disk_size} --display-name {vm_name}"
     subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
 
 # Main function
@@ -152,8 +143,12 @@ if __name__ == "__main__":
     vhd_url = azure_export_vhd(vm_name)
 
     # shape instance to be create on OCI
-    oci_shape = map_azure_vm_to_oci_shape(get_vm_config(vm_name)["size"])
-
+    az_size = get_vm_config(vm_name)["size"]
+    oci_shape = "VM.Standard3.Flex"
+    oci_shape_config = {
+        "Ocpus": int(map_azure_vm_to_oci_shape(az_size)[0])/2,
+        "MemoryInGBs": int(map_azure_vm_to_oci_shape(az_size)[1])
+    }
     # download the VHD file
     get_vhd_azure_url(vm_name, vhd_url)
 
