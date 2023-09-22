@@ -22,7 +22,7 @@ def get_vm_config(vm_name):
     result = subprocess.check_output(cmd, shell=True)
     vm_config = json.loads(result)
     return {
-        "size": vm_config[0],
+        "size": str(vm_config[0]),
         "disk_size": int(vm_config[1][0]),
         "disk_id": vm_config[2]
     }
@@ -152,7 +152,7 @@ if __name__ == "__main__":
     vhd_url = azure_export_vhd(vm_name)
 
     # shape instance to be create on OCI
-    oci_shape = str(map_azure_vm_to_oci_shape(get_vm_config(vm_name)["size"]))
+    oci_shape = map_azure_vm_to_oci_shape(get_vm_config(vm_name)["size"])
 
     # download the VHD file
     get_vhd_azure_url(vm_name, vhd_url)
