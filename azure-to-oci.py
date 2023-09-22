@@ -132,7 +132,7 @@ def oci_create_vm_from_image(qcow2_file, oci_shape, oci_disk_size):
 
 # Main function
 if __name__ == "__main__":
-    if len(sys.argv) < 6:
+    if len(sys.argv) < 2:
         print("Usage: script_url.py <vm-id> <resource-group> <compartment-id> <subnet-id>")
         sys.exit(1)
 
