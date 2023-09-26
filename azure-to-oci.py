@@ -116,10 +116,23 @@ def map_azure_vm_to_oci_shape(azure_size):
     }
     return list(mapping.get(azure_size, ["4", "16"]))
 
+# function to get the id of the image from the bucket
+def oci_get_image_id(qcow2_file):
+    print("Getting image id...")
+    cmd = f"oci compute image list --compartment-id {compartment_id} --display-name {qcow2_file} --query \"data[0].id\""
+    result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
+    return str(result.stdout.decode('utf-8').strip().strip('"'))
+
+# Function to import the image from the bucket to custom images
+def oci_import_image(qcow2_file):
+    print("Importing image...")
+    cmd = f"oci compute image import --compartment-id {compartment_id} --file {qcow2_file} --image-name {qcow2_file}"
+    subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
+
 # Function to create a VM in OCI from the imported image
 def oci_create_vm_from_image(qcow2_file, oci_shape, oci_disk_size):
     print("Creating VM in OCI...")
-    cmd = f"oci compute instance launch --availability-domain UIVj:US-ASHBURN-AD-1 --compartment-id {compartment_id} --shape {oci_shape} --shape-config \"{oci_shape_config}\" --image-id {image_id} --subnet-id {subnet_id} --assign-public-ip false --boot-volume-size-in-gbs {oci_disk_size} --display-name {vm_name}"
+    cmd = f"oci compute instance launch --availability-domain UIVj:US-ASHBURN-AD-1 --compartment-id {compartment_id} --shape {oci_shape} --shape-config \"{oci_shape_config}\" --image-id {qcow2_file} --subnet-id {subnet_id} --assign-public-ip false --boot-volume-size-in-gbs {oci_disk_size} --display-name {vm_name}"
     subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
 
 # Main function
@@ -175,5 +188,6 @@ if __name__ == "__main__":
 
     # create the VM from the imported image
     oci_disk_size = get_vm_config(vm_name)["disk_size"]
-    oci_create_vm_from_image(qcow2_file, oci_shape, int(oci_disk_size))
+    custom_image_id = oci_get_image_id(qcow2_file)
+    oci_create_vm_from_image(custom_image_id, oci_shape, int(oci_disk_size))
 

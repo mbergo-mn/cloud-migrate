@@ -28,6 +28,17 @@ def check_if_more_disks(vm_name):
         return True
     else:
         return False
+    
+# Create a custom image from object stora
+def oci_create_image(qcow2_file, vm_name):
+    print("Creating OCI image...")
+    cmd = f"oci compute image import from-object -bn {bucket_name} --display-name {vm_name} --compartment-id {compartment_id} --name {qcow2_file} --display-name {vm_name}"
+    subprocess.run(cmd, shell=True, check=True)
+
+def oci_create_block_volume(vm_name, oci_image_ocid):
+    print("Creating OCI block volume...")
+    cmd = f"oci bv volume create --availability-domain \"BvXz:US-ASHBURN-AD-1\" --compartment-id {compartment_id}"
+    subprocess.run(cmd, shell=True, check=True)
 
 # Function to get the OCI instance OCID
 def get_oci_instance_ocid(vm_name):
@@ -51,20 +62,28 @@ def oci_start_instance(oci_instance_ocid):
 # Function to attach the disk to the instance in OCI
 def oci_attach_disk(oci_instance_ocid, oci_disk_ocid):
     print("Attaching OCI disk...")
-    cmd = f"oci compute instance attach-volume --instance-id {oci_instance_ocid} --volume-id {oci_disk_ocid}"
+    cmd = f"oci compute volume-attachment attach --instance-id {oci_instance_ocid} --type paravirtualized --volume-id {oci_disk_ocid}"
     subprocess.run(cmd, shell=True, check=True)
 
+# Functio to get the custom image id in OCI
+def get_oci_image_id(vm_name):
+    print("Getting OCI image id...")
+    cmd = f"oci compute image list --compartment-id {compartment_id} --display-name {vm_name} --query \"data[0].id\""
+    result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
+    return result.stdout.decode('utf-8').strip().strip('"')
+
 # Function to export the VHD of the VM snapshot in Azure
-def azure_export_vhd(vm_name):
+def azure_export_vhd(snapshot_name):
     print("Exporting VHD from Azure...")
-    cmd = "az snapshot grant-access --name " + vm_name + "-snapshot --resource-group " + resource_group + " --duration-in-seconds 3600 --query \"accessSas\""
+    cmd = "az snapshot grant-access --name " + snapshot_name + "-snapshot --resource-group " + resource_group + " --duration-in-seconds 3600 --query \"accessSas\""
     url = subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
     return url.stdout.decode('utf-8').strip("\"")
 
 # Function to wget the VHD file from Azure
 def get_vhd_azure_url(vm_name, snapshot_url):
     print("Downloading VHD from Azure...")
-    cmd = "wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -O " + vhd_name + " \"" + snapshot_url
+    cmd = f"wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -O {vhd_name} {snapshot_url}"
+    #cmd = "wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -O " + vhd_name + " " +snapshot_url
     subprocess.run(cmd, shell=True, check=True)
     return vhd_name
 
@@ -100,20 +119,25 @@ if __name__ == "__main__":
         # Iterate through each disk and create a snapshot
         for disk in output:
             disk_name = disk[0]['name']
-            cmd = f"az snapshot create --name {disk_name}-snapshot --resource-group {resource_group} --source {disk_name}"
+            snapshot_name = f"{disk_name}-snapshot"
+            cmd = f"az snapshot create --name {snapshot_name} --resource-group {resource_group} --source {disk_name}"
             subprocess.run(cmd, shell=True, check=True)
-            # wait for the snapshot to be created
-            time.sleep(5)
             # export the snapshot
-            snapshot_url = azure_export_vhd(disk_name)
+            snapshot_url = azure_export_vhd(snapshot_name)
             # download the VHD file
-            vhd_name = disk_name + ".vhd"
+            vhd_name = f"{disk_name}.vhd"
             get_vhd_azure_url(vm_name, snapshot_url)
             # convert the VHD file to QCOW2 format
-            qcow2_file = disk_name + ".qcow2"
+            qcow2_file = {disk_name}.qcow2
             convert_vhd_to_qcow2(vhd_name, qcow2_file)
             # upload the QCOW2 file to OCI object storage
             oci_upload_image(qcow2_file)
+            # import the QCOW2 file to custom images
+            oci_create_image(qcow2_file, vm_name)
+            # get the custom image id
+            oci_image_ocid = get_oci_image_id(vm_name)
+            # attach the disk to the instance in OCI
+            oci_attach_disk(oci_instance_ocid, oci_image_ocid)
             # Attach the disk to the instance in OCI
             oci_attach_disk(oci_instance_ocid, qcow2_file)
         
