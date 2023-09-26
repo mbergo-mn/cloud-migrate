@@ -82,39 +82,43 @@ def oci_upload_image(qcow2_file):
     subprocess.run(cmd, shell=True, check=True)
     return qcow2_file
 
-# if it has more disks, create a snashot of each disk
-if check_if_more_disks(vm_name):
-    print("Creating snapshot of each disk...")
-    cmd = f"az vm show --name {vm_name} --resource-group {resource_group} --query [\"storageProfile.dataDisks\"]"
-    # Execute the command
-    output = subprocess.check_output(cmd, shell=True)
-    # Convert the output to a JSON object
-    output = json.loads(output)
-    # Stop the instance
-    oci_instance_ocid = get_oci_instance_ocid(vm_name)
-    oci_stop_instance(oci_instance_ocid)
-    # Iterate through each disk and create a snapshot
-    for disk in output:
-        disk_name = disk["name"]
-        cmd = "az snapshot create --name " + disk_name + "-snapshot --resource-group " + resource_group + " --source " + disk["id"]
-        subprocess.run(cmd, shell=True, check=True)
-        # wait for the snapshot to be created
-        time.sleep(5)
-        # export the snapshot
-        snapshot_url = azure_export_vhd(disk_name)
-        # download the VHD file
-        vhd_name = disk_name + ".vhd"
-        get_vhd_azure_url(vm_name, snapshot_url)
-        # convert the VHD file to QCOW2 format
-        qcow2_file = disk_name + ".qcow2"
-        convert_vhd_to_qcow2(vhd_name, qcow2_file)
-        # upload the QCOW2 file to OCI object storage
-        oci_upload_image(qcow2_file)
-        # Attach the disk to the instance in OCI
-        oci_attach_disk(oci_instance_ocid, qcow2_file)
-    
-    # Start the instance
-    oci_start_instance(oci_instance_ocid)
-else:
-    print("No more disks to create snapshot")
-    
+
+
+if __name__ == "__main__":
+    # if it has more disks, create a snashot of each disk
+    if check_if_more_disks(vm_name):
+        print("Creating snapshot of each disk...")
+        cmd = f"az vm show --name {vm_name} --resource-group {resource_group} --query [\"storageProfile.dataDisks\"]"
+        # Execute the command
+        output = subprocess.check_output(cmd, shell=True)
+        # Convert the output to a JSON object
+        output = json.loads(output)
+        # Stop the instance
+        oci_instance_ocid = get_oci_instance_ocid(vm_name)
+        oci_stop_instance(oci_instance_ocid)
+        # Iterate through each disk and create a snapshot
+        for disk in output:
+            # import pdb; pdb.set_trace()
+            disk_name = disk[0][0]['name']
+            cmd = "az snapshot create --name " + disk_name + "-snapshot --resource-group " + resource_group + " --source " + disk["id"]
+            subprocess.run(cmd, shell=True, check=True)
+            # wait for the snapshot to be created
+            time.sleep(5)
+            # export the snapshot
+            snapshot_url = azure_export_vhd(disk_name)
+            # download the VHD file
+            vhd_name = disk_name + ".vhd"
+            get_vhd_azure_url(vm_name, snapshot_url)
+            # convert the VHD file to QCOW2 format
+            qcow2_file = disk_name + ".qcow2"
+            convert_vhd_to_qcow2(vhd_name, qcow2_file)
+            # upload the QCOW2 file to OCI object storage
+            oci_upload_image(qcow2_file)
+            # Attach the disk to the instance in OCI
+            oci_attach_disk(oci_instance_ocid, qcow2_file)
+        
+        # Start the instance
+        oci_start_instance(oci_instance_ocid)
+    else:
+        print("No more disks to create snapshot")
+        
