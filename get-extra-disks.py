@@ -80,6 +80,7 @@ def oci_upload_image(qcow2_file):
     print("Uploading QCOW2 to OCI object storage...")
     cmd = "oci os object put -bn " + bucket_name + " --file " + qcow2_file + " -ns " + oci_urlspace
     subprocess.run(cmd, shell=True, check=True)
+    return qcow2_file
 
 # if it has more disks, create a snashot of each disk
 if check_if_more_disks(vm_name):
@@ -110,7 +111,7 @@ if check_if_more_disks(vm_name):
         # upload the QCOW2 file to OCI object storage
         oci_upload_image(qcow2_file)
         # Attach the disk to the instance in OCI
-        oci_attach_disk(oci_instance_ocid, oci_disk_ocid)
+        oci_attach_disk(oci_instance_ocid, qcow2_file)
     
     # Start the instance
     oci_start_instance(oci_instance_ocid)
