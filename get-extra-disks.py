@@ -78,7 +78,8 @@ def convert_vhd_to_qcow2(vhd_name, qcow2_file):
 # Function to upload QCOW2 file to OCI object storage
 def oci_upload_image(qcow2_file):
     print("Uploading QCOW2 to OCI object storage...")
-    cmd = "oci os object put -bn " + bucket_name + " --file " + qcow2_file + " -ns " + oci_urlspace
+    cmd = f"oci os object put -bn {bucket_name} --file {qcow2_file} -ns {oci_urlspace}"
+    #cmd = "oci os object put -bn " + bucket_name + " --file " + qcow2_file + " -ns " + oci_urlspace
     subprocess.run(cmd, shell=True, check=True)
     return qcow2_file
 
@@ -95,12 +96,12 @@ if __name__ == "__main__":
         output = json.loads(output)
         # Stop the instance
         oci_instance_ocid = get_oci_instance_ocid(vm_name)
-        oci_stop_instance(oci_instance_ocid)
+        #oci_stop_instance(oci_instance_ocid)
         # Iterate through each disk and create a snapshot
         for disk in output:
-            # import pdb; pdb.set_trace()
             disk_name = disk[0]['name']
-            cmd = "az snapshot create --name " + disk_name + "-snapshot --resource-group " + resource_group + " --source " + disk["id"]
+            import pdb; pdb.set_trace()
+            cmd = f"az snapshot create --name {disk_name}-snapshot --resource-group {resource_group} --source {disk_name}"
             subprocess.run(cmd, shell=True, check=True)
             # wait for the snapshot to be created
             time.sleep(5)
@@ -118,7 +119,7 @@ if __name__ == "__main__":
             oci_attach_disk(oci_instance_ocid, qcow2_file)
         
         # Start the instance
-        oci_start_instance(oci_instance_ocid)
+        #oci_start_instance(oci_instance_ocid)
     else:
         print("No more disks to create snapshot")
         
