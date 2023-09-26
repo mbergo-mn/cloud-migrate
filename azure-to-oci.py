@@ -116,7 +116,7 @@ def map_azure_vm_to_oci_shape(azure_size):
     }
     return list(mapping.get(azure_size, ["4", "16"]))
 
-# function to get the id of the image from the bucket
+# Function to get the id of the image from the bucket
 def oci_get_image_id(qcow2_file):
     print("Getting image id...")
     cmd = f"oci compute image list --compartment-id {compartment_id} --display-name {qcow2_file} --query \"data[0].id\""
