@@ -18,13 +18,13 @@ subnet_id = str(sys.argv[4])
 # check if the instance has more disks on Azure
 def check_if_more_disks(vm_name):
     # Construct the Azure CLI command to get VM details
-    cmd = "az vm show -n " + vm_name + " -g " + resource_group + " --query \"storageProfile.dataDisks\" -o json"
+    cmd = f"az vm show -n {vm_name} -g {resource_group} --query \"[storageProfile.dataDisks]\""
     # Execute the command
     output = subprocess.check_output(cmd, shell=True)
     # Convert the output to a JSON object
     output = json.loads(output)
     # Check if the VM has more than one disk
-    if len(output) > 1:
+    if len(output) > 0:
         return True
     else:
         return False
@@ -85,7 +85,7 @@ def oci_upload_image(qcow2_file):
 # if it has more disks, create a snashot of each disk
 if check_if_more_disks(vm_name):
     print("Creating snapshot of each disk...")
-    cmd = "az vm show -n " + vm_name + " -g " + resource_group + " --query \"storageProfile.dataDisks\" -o json"
+    cmd = f"az vm show --name {vm_name} --resource-group {resource_group} --query [\"storageProfile.dataDisks\"]"
     # Execute the command
     output = subprocess.check_output(cmd, shell=True)
     # Convert the output to a JSON object
