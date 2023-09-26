@@ -32,26 +32,26 @@ def check_if_more_disks(vm_name):
 # Function to get the OCI instance OCID
 def get_oci_instance_ocid(vm_name):
     print("Getting OCI instance OCID...")
-    cmd = "oci compute instance list --compartment-id " + compartment_id + " --display-name " + vm_name + " --query \"data[0].id\""
+    cmd = f"oci compute instance list --compartment-id {compartment_id} --display-name {vm_name} --query \"data[0].id\""
     result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
     return result.stdout.decode('utf-8').strip().strip('"')
 
 # Function to stop the instance in OCI
 def oci_stop_instance(oci_instance_ocid):
     print("Stopping OCI instance...")
-    cmd = "oci compute instance action --action STOP --instance-id " + oci_instance_ocid
+    cmd = f"oci compute instance action --action STOP --instance-id {oci_instance_ocid}"
     subprocess.run(cmd, shell=True, check=True)
 
 # Function to start the instance in OCI
 def oci_start_instance(oci_instance_ocid):
     print("Starting OCI instance...")
-    cmd = "oci compute instance action --action START --instance-id " + oci_instance_ocid
+    cmd = f"oci compute instance action --action START --instance-id {oci_instance_ocid}"
     subprocess.run(cmd, shell=True, check=True)
 
 # Function to attach the disk to the instance in OCI
 def oci_attach_disk(oci_instance_ocid, oci_disk_ocid):
     print("Attaching OCI disk...")
-    cmd = "oci compute instance attach-volume --instance-id " + oci_instance_ocid + " --volume-id " + oci_disk_ocid
+    cmd = f"oci compute instance attach-volume --instance-id {oci_instance_ocid} --volume-id {oci_disk_ocid}"
     subprocess.run(cmd, shell=True, check=True)
 
 # Function to export the VHD of the VM snapshot in Azure
@@ -71,9 +71,9 @@ def get_vhd_azure_url(vm_name, snapshot_url):
 # Function to convert VHD file to QCOW2 format
 def convert_vhd_to_qcow2(vhd_name, qcow2_file):
     print("Converting VHD to QCOW2...")
-    cmd = "qemu-img convert -p -f vpc -O qcow2 " + vhd_name + " " + qcow2_file
-    subprocess.run(cmd, shell=True, check=True)
-    return qcow2_file
+    cmd = f"qemu-img convert -p -f vpc -O qcow2 {vhd_name} {qcow2_file}"
+    subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
+    return qcow2_file.stdout.decode('utf-8').strip("\"")
 
 # Function to upload QCOW2 file to OCI object storage
 def oci_upload_image(qcow2_file):
