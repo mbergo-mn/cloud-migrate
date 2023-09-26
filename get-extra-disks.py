@@ -100,7 +100,6 @@ if __name__ == "__main__":
         # Iterate through each disk and create a snapshot
         for disk in output:
             disk_name = disk[0]['name']
-            import pdb; pdb.set_trace()
             cmd = f"az snapshot create --name {disk_name}-snapshot --resource-group {resource_group} --source {disk_name}"
             subprocess.run(cmd, shell=True, check=True)
             # wait for the snapshot to be created
