@@ -58,13 +58,20 @@ def oci_upload_image(qcow2_file):
     print("Uploading QCOW2 to OCI object storage...")
     bucket_url = "oci-migration"  # Modify as needed
     cmd = f"oci os object put -bn {bucket_name} --file {qcow2_file} -ns {oci_urlspace}"
-    subprocess.run(cmd, shell=True, check=False)
+    try:
+        subprocess.run(cmd, shell=True, check=True)
+    except:
+        pass
 
 # Function to import QCOW2 file as an image in OCI compute
 def oci_import_image(qcow2_file):
     print("Importing QCOW2 to OCI compute...")
-    cmd = f"oci compute image import from-object -bn azure-to-oci --compartment-id {compartment_id} --name {qcow2_file} -ns {oci_urlspace} --display-name {qcow2_file}"
-    subprocess.run(cmd, shell=True, check=True)
+    cmd = f"oci compute image import from-object -bn {bucket_name} --compartment-id {compartment_id} --name {qcow2_file} -ns {oci_urlspace} --display-name {qcow2_file}"
+    try:
+        subprocess.run(cmd, shell=True, check=True)
+    except:
+        print("Image already exists. Skipping...")
+        pass
 
 # Function to check the if the image status is AVAILABLE
 def oci_check_image_status(qcow2_file):
@@ -122,12 +129,6 @@ def oci_get_image_id(qcow2_file):
     cmd = f"oci compute image list --compartment-id {compartment_id} --display-name {qcow2_file} --query \"data[0].id\""
     result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
     return str(result.stdout.decode('utf-8').strip().strip('"'))
-
-# Function to import the image from the bucket to custom images
-def oci_import_image(qcow2_file):
-    print("Importing image...")
-    cmd = f"oci compute image import --compartment-id {compartment_id} --file {qcow2_file} --image-name {qcow2_file}"
-    subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
 
 # Function to create a VM in OCI from the imported image
 def oci_create_vm_from_image(qcow2_file, oci_shape, oci_disk_size):
