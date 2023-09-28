@@ -34,6 +34,12 @@ def azure_create_snapshot(vm_name):
     cmd = f"az snapshot create --name {vm_name}-snapshot --resource-group {resource_group} --source {disk_id}"
     subprocess.run(cmd, shell=True, check=True)
 
+# Remove encryptio from snapshot
+def azure_remove_encryption(vm_name):
+    print("Removing encryption from snapshot...")
+    cmd = f"az disk-encryption-set delete --name {vm_name}-snapshot --resource-group {resource_group}"
+    subprocess.run(cmd, shell=True, check=True)
+
 # Function to export the VHD of the VM snapshot in Azure
 def azure_export_vhd(vm_name):
     print("Exporting VHD from Azure...")
@@ -153,6 +159,9 @@ if __name__ == "__main__":
 
     # create the snapshot of the VM disk
     azure_create_snapshot(vm_name)
+
+    # remove encryption from snapshot
+    azure_remove_encryption(vm_name)
 
     # get the snapshot url of the VM disk
     vhd_url = azure_export_vhd(vm_name)
