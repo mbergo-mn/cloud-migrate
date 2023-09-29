@@ -18,13 +18,14 @@ subnet_id = str(sys.argv[4])
 # Function to retrieve VM configuration from Azure
 def get_vm_config(vm_name):
     # Construct the Azure CLI command to get VM details
-    cmd = f"az vm show --resource-group {resource_group} --name {vm_name} --query \"[hardwareProfile.vmSize, storageProfile.dataDisks[].diskSizeGb[], storageProfile.osDisk.name]\""
+    cmd = f"az vm show --resource-group {resource_group} --name {vm_name} --query \"[hardwareProfile.vmSize, storageProfile.dataDisks[].diskSizeGb[], storageProfile.osDisk.name, storageProfile.dataDisks[0].name]\""
     result = subprocess.check_output(cmd, shell=True)
     vm_config = json.loads(result)
     return {
         "size": str(vm_config[0]),
         "disk_size": 0,
-        "disk_id": vm_config[2]
+        "disk_id": vm_config[2],
+        "extra_disk": str(vm_config[3])
     }
 
 # Function to create a snapshot of the VM disk in Azure
@@ -50,7 +51,7 @@ def azure_export_vhd(vm_name):
 # Function to download the VHD file from Azure
 def get_vhd_azure_url(vm_name, snapshot_url):
     print("Downloading VHD from Azure...")
-    cmd = f"wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -O {vhd_name} \"{snapshot_url}"
+    cmd = f"wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -O {vm_name}.vhd {snapshot_url}"
     subprocess.run(cmd, shell=True, check=True)
 
 # Function to convert VHD file to QCOW2 format
@@ -137,7 +138,7 @@ def oci_get_image_id(qcow2_file):
     return str(result.stdout.decode('utf-8').strip().strip('"'))
 
 # Function to create a VM in OCI from the imported image
-def oci_create_vm_from_image(qcow2_file, oci_shape, oci_disk_size):
+def oci_create_vm_from_image(qcow2_file, oci_shape):
     print("Creating VM in OCI...")
     cmd = f"oci compute instance launch --availability-domain UIVj:US-ASHBURN-AD-1 --compartment-id {compartment_id} --shape {oci_shape} --shape-config \"{oci_shape_config}\" --image-id {qcow2_file} --subnet-id {subnet_id} --assign-public-ip false --display-name {vm_name}"
     subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
@@ -200,4 +201,14 @@ if __name__ == "__main__":
     # oci_disk_size = get_vm_config(vm_name)["disk_size"]
     # custom_image_id = oci_get_image_id(qcow2_file)
     # oci_create_vm_from_image(custom_image_id, oci_shape, int(oci_disk_size))
-
+    extra_disk = get_vm_config(vm_name)["extra_disk"]
+    # Take a snaoshot of the extra disk
+    azure_create_snapshot(extra_disk)
+    # Remove encryption from the snapshot
+    azure_remove_encryption(extra_disk)
+    # Get the snapshot url of the extra disk
+    vhd_url = azure_export_vhd(extra_disk)
+    # download the VHD file
+    get_vhd_azure_url(extra_disk, vhd_url)
+    # upload to the oci object storage
+    oci_upload_image(extra_disk)
