@@ -14,6 +14,7 @@ resource_group = str(sys.argv[2])
 compartment_id = str(sys.argv[3])
 subnet_id = str(sys.argv[4])
 data_disk=str(sys.argv[5])
+os_type=str(sys.argv[6])
 
 # Function to retrieve VM configuration from Azure
 def get_vm_config(vm_name):
@@ -79,7 +80,7 @@ def oci_upload_image(qcow2_file):
 # Function to import QCOW2 file as an image in OCI compute
 def oci_import_image(qcow2_file):
     print("Importing QCOW2 to OCI compute...")
-    cmd = f"oci compute image import from-object -bn {bucket_name} --compartment-id {compartment_id} --name {qcow2_file} -ns {oci_urlspace} --display-name {qcow2_file}"
+    cmd = f"oci compute image import from-object -bn {bucket_name} --file {qcow2_file} --compartment-id {compartment_id} --name {qcow2_file} -ns {oci_urlspace} --operating-system \"{os_type}\" --source-image-type QCOW2 --launch-mode PARAVIRTUALIZED"
     try:
         subprocess.run(cmd, shell=True, check=True)
     except:
@@ -224,3 +225,28 @@ if __name__ == "__main__":
         oci_upload_image(qcow2_extra)
         # import the QCOW2 file to OCI compute
         oci_import_image(qcow2_extra)
+        # check if the image is available
+        while True:
+            if oci_check_image_status(qcow2_extra) == "AVAILABLE":
+                break
+            else:
+                print("Waiting for image to be available...")
+                time.sleep(60)
+
+        # get the image id
+        cutom_image_id = oci_check_image_id(qcow2_extra) 
+        # spawn a instance with the image
+        oci_create_vm_from_image(custom_image_id, oci_shape, int(oci_disk_size))
+        # get the instance id
+        instance_id = oci_get_image_id(vm_name)
+        # destroy the instance without removing the boot volume
+        cmd = f"oci compute instance terminate --instance-id {instance_id} --preserve-boot-volume true"
+        # get the id of the boot volume
+        cmd = f"oci compute boot-volume-attachment list --instance-id {instance_id} --query \"data[0].bootVolumeId\""
+        result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
+        # Attach the boot volume to the main instance
+        cmd = f"oci compute boot-volume-attachment attach --instance-id {instance_id} --boot-volume-id {result.stdout.decode('utf-8').strip().strip('"')} --device /dev/vdb"
+        subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
+        # reboot the original instance
+        cmd = f"oci compute instance reboot --instance-id {instance_id}"
+        subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
