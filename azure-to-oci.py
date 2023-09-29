@@ -241,6 +241,7 @@ if __name__ == "__main__":
         instance_id = oci_get_image_id(vm_name)
         # destroy the instance without removing the boot volume
         cmd = f"oci compute instance terminate --instance-id {instance_id} --preserve-boot-volume true"
+        subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
         # get the id of the boot volume
         cmd = f"oci compute boot-volume-attachment list --instance-id {instance_id} --query \"data[0].bootVolumeId\""
         result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
