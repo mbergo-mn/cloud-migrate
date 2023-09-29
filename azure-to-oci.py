@@ -177,7 +177,7 @@ if __name__ == "__main__":
     get_vhd_azure_url(vm_name, vhd_url)
 
     # convert the VHD file to QCOW2
-    convert_vhd_to_qcow2(vhd_name, qcow2_file)
+    #convert_vhd_to_qcow2(vhd_name, qcow2_file)
 
     # upload the QCOW2 file to OCI object storage
     oci_upload_image(vhd_name)
