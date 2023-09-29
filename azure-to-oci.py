@@ -13,7 +13,7 @@ bucket_name="azure-to-oci"
 resource_group = str(sys.argv[2])
 compartment_id = str(sys.argv[3])
 subnet_id = str(sys.argv[4])
-
+data_disk=str(sys.argv[5])
 
 # Function to retrieve VM configuration from Azure
 def get_vm_config(vm_name):
@@ -29,29 +29,35 @@ def get_vm_config(vm_name):
     }
 
 # Function to create a snapshot of the VM disk in Azure
-def azure_create_snapshot(vm_name):
-    print("Creating snapshot in Azure...")
-    disk_id = get_vm_config(vm_name)['disk_id']
-    cmd = f"az snapshot create --name {vm_name}-snapshot --resource-group {resource_group} --source {disk_id}"
-    subprocess.run(cmd, shell=True, check=True)
+def azure_create_snapshot(disk_name, vm_name):
+    if not data_disk:
+        print("Creating snapshot in Azure...")
+        disk_id = get_vm_config(vm_name)['disk_id']
+        cmd = f"az snapshot create --name {disk_name}-snapshot --resource-group {resource_group} --source {disk_id}"
+        subprocess.run(cmd, shell=True, check=True)
+    else:
+        print("Creating extra disk snapshot in Azure...")
+        extra_disk_id = get_vm_config(vm_name)['extra_disk']
+        cmd = f"az snapshot create --name {disk_name}-snapshot --resource-group {resource_group} --source {extra_disk_id}"
+        subprocess.run(cmd, shell=True, check=True)
 
 # Remove encryptio from snapshot
-def azure_remove_encryption(vm_name):
+def azure_remove_encryption(vhd_name):
     print("Removing encryption from snapshot...")
-    cmd = f"az disk-encryption-set delete --name {vm_name}-snapshot --resource-group {resource_group}"
+    cmd = f"az disk-encryption-set delete --name {vhd_name}-snapshot --resource-group {resource_group}"
     subprocess.run(cmd, shell=True, check=True)
 
 # Function to export the VHD of the VM snapshot in Azure
-def azure_export_vhd(vm_name):
+def azure_export_vhd(disk_name):
     print("Exporting VHD from Azure...")
-    cmd = f"az snapshot grant-access --name \"{vm_name}-snapshot\" --resource-group \"{resource_group}\" --duration-in-seconds 3600 --query \"accessSas\""
+    cmd = f"az snapshot grant-access --name \"{disk_name}-snapshot\" --resource-group \"{resource_group}\" --duration-in-seconds 3600 --query \"accessSas\""
     url = subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
     return url.stdout.decode('utf-8').strip("\"")
 
 # Function to download the VHD file from Azure
-def get_vhd_azure_url(vm_name, snapshot_url):
+def get_vhd_azure_url(disk_name, snapshot_url):
     print("Downloading VHD from Azure...")
-    cmd = f"wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -O {vm_name}.vhd {snapshot_url}"
+    cmd = f"wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -O {disk_name}.vhd {snapshot_url}"
     subprocess.run(cmd, shell=True, check=True)
 
 # Function to convert VHD file to QCOW2 format
@@ -159,13 +165,13 @@ if __name__ == "__main__":
     vhd_name = f"{vm_name}.vhd"
 
     # create the snapshot of the VM disk
-    azure_create_snapshot(vm_name)
+    azure_create_snapshot(vhd_name, vm_name)
 
     # remove encryption from snapshot
-    azure_remove_encryption(vm_name)
+    azure_remove_encryption(vhd_name)
 
     # get the snapshot url of the VM disk
-    vhd_url = azure_export_vhd(vm_name)
+    vhd_url = azure_export_vhd(vhd_name)
 
     # shape instance to be create on OCI
     az_size = get_vm_config(vm_name)["size"]
@@ -175,40 +181,46 @@ if __name__ == "__main__":
         "MemoryInGBs": int(map_azure_vm_to_oci_shape(az_size)[1])
     }
     # download the VHD file
-    get_vhd_azure_url(vm_name, vhd_url)
+    get_vhd_azure_url(vhd_name, vhd_url)
 
     # convert the VHD file to QCOW2
-    #convert_vhd_to_qcow2(vhd_name, qcow2_file)
+    convert_vhd_to_qcow2(vhd_name, qcow2_file)
 
     # upload the QCOW2 file to OCI object storage
-    oci_upload_image(vhd_name)
+    oci_upload_image(qcow2_file)
 
     # import the QCOW2 file to OCI compute
-    # oci_import_image(qcow2_file)
+    oci_import_image(qcow2_file)
 
-    # # check if the image is available
-    # while True:
-    #     if oci_check_image_status(qcow2_file) == "AVAILABLE":
-    #         break
-    #     else:
-    #         print("Waiting for image to be available...")
-    #         time.sleep(60)
+    # check if the image is available
+    while True:
+        if oci_check_image_status(qcow2_file) == "AVAILABLE":
+            break
+        else:
+            print("Waiting for image to be available...")
+            time.sleep(60)
 
-    # # get the image id
-    # image_id = oci_check_image_id(qcow2_file)
+    # get the image id
+    image_id = oci_check_image_id(qcow2_file)
 
     # # create the VM from the imported image
-    # oci_disk_size = get_vm_config(vm_name)["disk_size"]
-    # custom_image_id = oci_get_image_id(qcow2_file)
-    # oci_create_vm_from_image(custom_image_id, oci_shape, int(oci_disk_size))
-    extra_disk = get_vm_config(vm_name)["extra_disk"]
-    # Take a snaoshot of the extra disk
-    azure_create_snapshot(extra_disk)
-    # Remove encryption from the snapshot
-    azure_remove_encryption(extra_disk)
-    # Get the snapshot url of the extra disk
-    vhd_url = azure_export_vhd(extra_disk)
-    # download the VHD file
-    get_vhd_azure_url(extra_disk, vhd_url)
-    # upload to the oci object storage
-    oci_upload_image(extra_disk)
+    oci_disk_size = get_vm_config(vm_name)["disk_size"]
+    custom_image_id = oci_get_image_id(qcow2_file)
+    oci_create_vm_from_image(custom_image_id, oci_shape, int(oci_disk_size))
+    if data_disk:
+        extra_disk = get_vm_config(vm_name)["extra_disk"]
+        # Take a snaoshot of the extra disk
+        azure_create_snapshot(extra_disk, vm_name)
+        # Remove encryption from the snapshot
+        azure_remove_encryption(extra_disk)
+        # Get the snapshot url of the extra disk
+        vhd_url = azure_export_vhd(extra_disk)
+        # download the VHD file
+        get_vhd_azure_url(extra_disk, vhd_url)
+        # convert the VHD file to QCOW2
+        qcow2_extra = f"{extra_disk}.qcow2"
+        convert_vhd_to_qcow2(extra_disk, qcow2_extra)
+        # upload to the oci object storage
+        oci_upload_image(qcow2_extra)
+        # import the QCOW2 file to OCI compute
+        oci_import_image(qcow2_extra)
