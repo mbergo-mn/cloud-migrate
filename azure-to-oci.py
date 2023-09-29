@@ -180,24 +180,24 @@ if __name__ == "__main__":
     convert_vhd_to_qcow2(vhd_name, qcow2_file)
 
     # upload the QCOW2 file to OCI object storage
-    oci_upload_image(qcow2_file)
+    oci_upload_image(vhd_name)
 
     # import the QCOW2 file to OCI compute
-    oci_import_image(qcow2_file)
+    # oci_import_image(qcow2_file)
 
-    # check if the image is available
-    while True:
-        if oci_check_image_status(qcow2_file) == "AVAILABLE":
-            break
-        else:
-            print("Waiting for image to be available...")
-            time.sleep(60)
+    # # check if the image is available
+    # while True:
+    #     if oci_check_image_status(qcow2_file) == "AVAILABLE":
+    #         break
+    #     else:
+    #         print("Waiting for image to be available...")
+    #         time.sleep(60)
 
-    # get the image id
-    image_id = oci_check_image_id(qcow2_file)
+    # # get the image id
+    # image_id = oci_check_image_id(qcow2_file)
 
-    # create the VM from the imported image
-    oci_disk_size = get_vm_config(vm_name)["disk_size"]
-    custom_image_id = oci_get_image_id(qcow2_file)
-    oci_create_vm_from_image(custom_image_id, oci_shape, int(oci_disk_size))
+    # # create the VM from the imported image
+    # oci_disk_size = get_vm_config(vm_name)["disk_size"]
+    # custom_image_id = oci_get_image_id(qcow2_file)
+    # oci_create_vm_from_image(custom_image_id, oci_shape, int(oci_disk_size))
 
