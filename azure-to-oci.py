@@ -13,7 +13,7 @@ bucket_name="azure-to-oci"
 resource_group = str(sys.argv[2])
 compartment_id = str(sys.argv[3])
 subnet_id = str(sys.argv[4])
-data_disk=sys.argv[5]
+data_disk=bool(sys.argv[5])
 os_type=str(sys.argv[6])
 
 # Function to retrieve VM configuration from Azure
@@ -249,7 +249,6 @@ if __name__ == "__main__":
         result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
         # Attach the boot volume to the main instance
         cmd = f"oci compute boot-volume-attachment attach --instance-id {instance_id} --boot-volume-id {result.stdout.decode('utf-8').strip().strip('{{').strip('}}')} --device \"/dev/sdb\""
-
         subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
         # reboot the original instance
         cmd = f"oci compute instance reboot --instance-id {instance_id}"
