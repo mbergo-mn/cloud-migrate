@@ -43,9 +43,9 @@ def azure_create_snapshot(disk_name, vm_name):
         subprocess.run(cmd, shell=True, check=True)
 
 # Remove encryptio from snapshot
-def azure_remove_encryption(vhd_name):
+def azure_remove_encryption(vm_name):
     print("Removing encryption from snapshot...")
-    cmd = f"az disk-encryption-set delete --name {vhd_name}-snapshot --resource-group {resource_group}"
+    cmd = f"az disk-encryption-set delete --name {vm_name}-snapshot --resource-group {resource_group}"
     subprocess.run(cmd, shell=True, check=True)
 
 # Function to export the VHD of the VM snapshot in Azure
