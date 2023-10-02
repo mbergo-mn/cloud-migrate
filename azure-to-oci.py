@@ -13,7 +13,7 @@ bucket_name="azure-to-oci"
 resource_group = str(sys.argv[2])
 compartment_id = str(sys.argv[3])
 subnet_id = str(sys.argv[4])
-data_disk=str(sys.argv[5])
+data_disk=sys.argv[5]
 os_type=str(sys.argv[6])
 
 # Function to retrieve VM configuration from Azure
@@ -43,9 +43,9 @@ def azure_create_snapshot(disk_name, vm_name):
         subprocess.run(cmd, shell=True, check=True)
 
 # Remove encryptio from snapshot
-def azure_remove_encryption(vm_name):
+def azure_remove_encryption(vhd_name):
     print("Removing encryption from snapshot...")
-    cmd = f"az disk-encryption-set delete --name {vm_name}-snapshot --resource-group {resource_group}"
+    cmd = f"az disk-encryption-set delete --name {vhd_name}-snapshot --resource-group {resource_group}"
     subprocess.run(cmd, shell=True, check=True)
 
 # Function to export the VHD of the VM snapshot in Azure
@@ -53,12 +53,12 @@ def azure_export_vhd(disk_name):
     print("Exporting VHD from Azure...")
     cmd = f"az snapshot grant-access --name \"{disk_name}-snapshot\" --resource-group \"{resource_group}\" --duration-in-seconds 3600 --query \"accessSas\""
     url = subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
-    return url.stdout.decode('utf-8').strip("\"")
+    return url.stdout.decode('utf-8').strip("\"").strip("\n")
 
 # Function to download the VHD file from Azure
 def get_vhd_azure_url(disk_name, snapshot_url):
     print("Downloading VHD from Azure...")
-    cmd = f"wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -O {disk_name}.vhd {snapshot_url}"
+    cmd = f"wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -O {disk_name}.vhd \"{snapshot_url}"
     subprocess.run(cmd, shell=True, check=True)
 
 # Function to convert VHD file to QCOW2 format
@@ -161,6 +161,8 @@ if __name__ == "__main__":
 
     # image qcow2 file name
     qcow2_file = f"{vm_name}.qcow2"
+
+    import pdb; pdb.set_trace()
 
     # image vhd file name
     vhd_name = f"{vm_name}.vhd"
