@@ -246,7 +246,8 @@ if __name__ == "__main__":
         cmd = f"oci compute boot-volume-attachment list --instance-id {instance_id} --query \"data[0].bootVolumeId\""
         result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
         # Attach the boot volume to the main instance
-        cmd = f"oci compute boot-volume-attachment attach --instance-id {instance_id} --boot-volume-id {result.stdout.decode('utf-8').strip().strip('\"')} --device /dev/vdb"
+        cmd = f"oci compute boot-volume-attachment attach --instance-id {instance_id} --boot-volume-id {result.stdout.decode('utf-8').strip().strip('{{').strip('}}')} --device \"/dev/sdb\""
+
         subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
         # reboot the original instance
         cmd = f"oci compute instance reboot --instance-id {instance_id}"
