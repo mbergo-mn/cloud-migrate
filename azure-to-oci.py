@@ -162,8 +162,6 @@ if __name__ == "__main__":
     # image qcow2 file name
     qcow2_file = f"{vm_name}.qcow2"
 
-    import pdb; pdb.set_trace()
-
     # image vhd file name
     vhd_name = f"{vm_name}.vhd"
 
