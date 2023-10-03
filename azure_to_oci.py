@@ -10,11 +10,7 @@ import time
 # Globals
 oci_urlspace = "id8hewq9h9im" # Modify as needed, but this is the bucket used for the migration
 bucket_name="azure-to-oci"
-resource_group = str(sys.argv[2])
-compartment_id = str(sys.argv[3])
-subnet_id = str(sys.argv[4])
-data_disk=bool(sys.argv[5])
-os_type=str(sys.argv[6])
+
 
 # Function to retrieve VM configuration from Azure
 def get_vm_config(vm_name):
@@ -58,7 +54,7 @@ def azure_export_vhd(disk_name):
 # Function to download the VHD file from Azure
 def get_vhd_azure_url(disk_name, snapshot_url):
     print("Downloading VHD from Azure...")
-    cmd = f"wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -O {disk_name}.vhd \"{snapshot_url}"
+    cmd = f"wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -O {disk_name} \"{snapshot_url}"
     subprocess.run(cmd, shell=True, check=True)
 
 # Function to convert VHD file to QCOW2 format
@@ -152,12 +148,16 @@ def oci_create_vm_from_image(qcow2_file, oci_shape):
 
 # Main function
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: script_url.py <vm-id> <resource-group> <compartment-id> <subnet-id>")
+    if len(sys.argv) < 7:
+        print("Usage: azure_to_oci.py <vm-id> <resource-group> <compartment-id> <subnet-id> <data-disk> <os-type>")
         sys.exit(1)
 
-    # url of the VM on Azure
     vm_name = sys.argv[1]
+    resource_group = str(sys.argv[2])
+    compartment_id = str(sys.argv[3])
+    subnet_id = str(sys.argv[4])
+    data_disk = bool(sys.argv[5])
+    os_type = str(sys.argv[6])
 
     # image qcow2 file name
     qcow2_file = f"{vm_name}.qcow2"
