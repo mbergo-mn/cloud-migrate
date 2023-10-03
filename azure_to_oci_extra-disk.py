@@ -128,8 +128,8 @@ def oci_reboot_instance(vm_name):
 
 # Main function
 if __name__ == "__main__":
-    if len(sys.argv) < 7:
-        print("Usage: azure_to_oci.py <vm-id> <resource-group> <compartment-id> <subnet-id> <data-disk> <os-type>")
+    if len(sys.argv) < 4:
+        print("Usage: azure_to_oci.py <vm-id> <resource-group> <compartment-id> <subnet-id>")
         sys.exit(1)
 
     vm_name = sys.argv[1]
@@ -139,13 +139,13 @@ if __name__ == "__main__":
 
 
     # image qcow2 file name
-    qcow2_file = f"{vm_name}.qcow2"
+    qcow2_file = f"{vm_name}-data.qcow2"
 
     # temporary instance name
     vm_name_temp = f"{vm_name}-temp"
 
     # image vhd file name
-    vhd_name = f"{vm_name}.vhd"
+    vhd_name = f"{vm_name}-data.vhd"
 
     # create the snapshot of the VM disk
     azure_create_snapshot(vhd_name, vm_name)
