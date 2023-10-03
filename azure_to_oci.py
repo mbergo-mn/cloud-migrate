@@ -209,45 +209,60 @@ if __name__ == "__main__":
     custom_image_id = oci_get_image_id(qcow2_file)
     oci_create_vm_from_image(custom_image_id, oci_shape, int(oci_disk_size))
     if data_disk:
+        print("Data disk found. Creating extra disk...")
         extra_disk = get_vm_config(vm_name)["extra_disk"]
         # Take a snaoshot of the extra disk
+        print("Creating snapshot of extra disk...")
         azure_create_snapshot(extra_disk, vm_name)
         # Remove encryption from the snapshot
+        print("Removing encryption from snapshot...")
         azure_remove_encryption(extra_disk)
         # Get the snapshot url of the extra disk
+        print("Getting snapshot url of extra disk...")
         vhd_url = azure_export_vhd(extra_disk)
         # download the VHD file
+        print("Downloading VHD from Azure...")
         get_vhd_azure_url(extra_disk, vhd_url)
         # convert the VHD file to QCOW2
+        print("Converting VHD to QCOW2...")
         qcow2_extra = f"{extra_disk}.qcow2"
         convert_vhd_to_qcow2(extra_disk, qcow2_extra)
         # upload to the oci object storage
+        print("Uploading QCOW2 to OCI object storage...")
         oci_upload_image(qcow2_extra)
         # import the QCOW2 file to OCI compute
+        print("Importing QCOW2 to OCI compute...")
         oci_import_image(qcow2_extra)
         # check if the image is available
         while True:
             if oci_check_image_status(qcow2_extra) == "AVAILABLE":
                 break
             else:
-                print("Waiting for image to be available...")
+                print("Waiting for extra image to be available...")
                 time.sleep(60)
 
         # get the image id
+        print("Getting image id...")
         cutom_image_id = oci_check_image_id(qcow2_extra) 
         # spawn a instance with the image
+        print("Creating VM in OCI...")
         oci_create_vm_from_image(custom_image_id, oci_shape, int(oci_disk_size))
         # get the instance id
+        print("Getting instance id...")
         instance_id = oci_get_image_id(vm_name)
         # destroy the instance without removing the boot volume
+        print("Destroying instance...")
         cmd = f"oci compute instance terminate --instance-id {instance_id} --preserve-boot-volume true"
         subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
         # get the id of the boot volume
+        print("Getting boot volume id...")
         cmd = f"oci compute boot-volume-attachment list --instance-id {instance_id} --query \"data[0].bootVolumeId\""
         result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
         # Attach the boot volume to the main instance
+        print("Attaching boot volume to instance...")
         cmd = f"oci compute boot-volume-attachment attach --instance-id {instance_id} --boot-volume-id {result.stdout.decode('utf-8').strip().strip('{{').strip('}}')} --device \"/dev/sdb\""
         subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
         # reboot the original instance
+        print("Rebooting instance...")
         cmd = f"oci compute instance reboot --instance-id {instance_id}"
         subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
