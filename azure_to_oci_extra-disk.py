@@ -136,8 +136,7 @@ if __name__ == "__main__":
     resource_group = str(sys.argv[2])
     compartment_id = str(sys.argv[3])
     subnet_id = str(sys.argv[4])
-    data_disk = bool(sys.argv[5])
-    os_type = str(sys.argv[6])
+
 
     # image qcow2 file name
     qcow2_file = f"{vm_name}.qcow2"
