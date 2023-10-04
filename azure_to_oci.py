@@ -21,7 +21,7 @@ def get_vm_config(vm_name):
     return {
         "disk_id": str(vm_config[0]),
         "data_disk": str(vm_config[1]),
-        "disk_size": int(vm_config[2]),
+        "disk_size": str(vm_config[2]),
         "size": str(vm_config[3])
     }
 
