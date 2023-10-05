@@ -120,6 +120,13 @@ def oci_terminate_instance(vm_name):
     cmd = f"oci compute instance terminate --instance-id {vm_name} --preserve-boot-volume true"
     subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE)
 
+# Function to check if a instance is RUNNING
+def oci_check_instance_running(vm_name):
+    print("Checking instance status...")
+    cmd = f"oci compute instance list --compartment-id {compartment_id} --display-name {vm_name} --query \"data[0].\"lifecycle-state\""
+    result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
+    return result.stdout.decode('utf-8').strip().strip('"')
+
 # Function to reboot the instance
 def oci_reboot_instance(vm_name):
     print("Rebooting instance...")
@@ -200,6 +207,13 @@ if __name__ == "__main__":
             time.sleep(60)
     # get the boot disk id
     boot_disk_id = get_vm_config(vm_name_temp)["boot_disk"]
+    # check if the main instance is already running
+    while True:
+        if oci_check_instance_running(vm_name) == "RUNNING":
+            break
+        else:
+            print("Waiting for instance to be running...")
+            time.sleep(60)
     # kill the instance
     oci_terminate_instance(vm_name_temp)
     # attach the boot disk to the instance
