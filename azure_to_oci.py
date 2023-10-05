@@ -15,7 +15,7 @@ bucket_name="azure-to-oci" # Modify as needed, but this is the bucket used for t
 # Function to retrieve VM configuration from Azure
 def get_vm_config(vm_name):
     # Construct the Azure CLI command to get VM details
-    cmd = f"az vm show --resource-group {resource_group} --name {vm_name} --query \"[storageProfile.osDisk.name, storageProfile.dataDisks[0].name, storageProfile.dataDisks[0].diskSizeGb, hardwareProfile.vmSize]\""
+    cmd = f"az vm show --resource-group {resource_group} --name {vm_name} --query \"[storageProfile.osDisk.name, storageProfile.dataDisks[1].name, storageProfile.dataDisks[0].diskSizeGb, hardwareProfile.vmSize]\""
     result = subprocess.check_output(cmd, shell=True)
     vm_config = json.loads(result)
     return {
