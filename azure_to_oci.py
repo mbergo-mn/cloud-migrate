@@ -19,7 +19,7 @@ def get_vm_config(vm_name):
     result = subprocess.check_output(cmd, shell=True)
     vm_config = json.loads(result)
     return {
-        "disk_id": str(sys.argv[7]),
+        "disk_id": str(vm_config[0]),
         "data_disk": str(vm_config[1]),
         "disk_size": str(vm_config[2]),
         "size": str(vm_config[3])
@@ -29,7 +29,6 @@ def get_vm_config(vm_name):
 def azure_create_snapshot(disk_name, vm_name):
         print("Creating snapshot in Azure...")
         # disk_id = get_vm_config(vm_name)['disk_id']
-        disk_id = "jenkins-docker-srv1-osdisk"
         cmd = f"az snapshot create --name {disk_name}-snapshot --resource-group {resource_group} --source {disk_id}"
         subprocess.run(cmd, shell=True, check=True)
 
