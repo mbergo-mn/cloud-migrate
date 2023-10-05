@@ -28,7 +28,7 @@ def get_vm_config(vm_name):
 # Function to create a snapshot of the VM disk in Azure
 def azure_create_snapshot(disk_name, vm_name):
         print("Creating snapshot in Azure...")
-        # disk_id = get_vm_config(vm_name)['disk_id']
+        disk_id = get_vm_config(vm_name)['disk_id']
         cmd = f"az snapshot create --name {disk_name}-snapshot --resource-group {resource_group} --source {disk_id}"
         subprocess.run(cmd, shell=True, check=True)
 
