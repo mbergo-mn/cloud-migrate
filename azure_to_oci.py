@@ -70,7 +70,7 @@ def oci_upload_image(qcow2_file):
 # Function to import QCOW2 file as an image in OCI compute
 def oci_import_image(qcow2_file):
     print("Importing QCOW2 to OCI compute...")
-    cmd = f"oci compute image import from-object -bn {bucket_name} --compartment-id {compartment_id} --name {qcow2_file} -ns {oci_urlspace} display-name {qcow2_file} --operating-system \"{os_type}\" --source-image-type QCOW2 --launch-mode PARAVIRTUALIZED"
+    cmd = f"oci compute image import from-object -bn {bucket_name} --compartment-id {compartment_id} --name {qcow2_file} -ns {oci_urlspace} --operating-system \"{os_type}\" --source-image-type QCOW2 --launch-mode PARAVIRTUALIZED"
     try:
         subprocess.run(cmd, shell=True, check=True)
     except:
